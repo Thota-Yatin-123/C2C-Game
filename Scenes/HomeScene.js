@@ -16,6 +16,11 @@ preload() {
         'assets/StartAudio.wav'
     );
 
+    this.load.audio(
+    'gameMusic',
+    'assets/GameAudio.wav'
+);
+
 }
 
 create() {
@@ -270,29 +275,47 @@ createButton(x, y, text) {
             yoyo: true
         });
 
-        if (text === 'START') {
+if (text === 'START') {
 
-            if (this.musicEnabled) {
-                this.sound.play('startAudio');
-            }
+    // Play the start sound
+    if (this.soundEnabled) {
+        this.sound.play('startAudio');
+    }
 
-            const saveFile =
-                localStorage.getItem('C2C_SAVE');
+    // Start background music
+    if (this.musicEnabled) {
 
-            if (saveFile) {
+        let music = this.sound.get('gameMusic');
 
-                const saveData =
-                    JSON.parse(saveFile);
-
-                this.scene.start(saveData.scene);
-
-            } else {
-
-                this.scene.start('Level1Scene');
-
-            }
-
+        if (!music) {
+            music = this.sound.add('gameMusic', {
+                loop: true,
+                volume: 0.5
+            });
         }
+
+        if (!music.isPlaying) {
+            music.play();
+        }
+    }
+
+    const saveFile =
+        localStorage.getItem('C2C_SAVE');
+
+    if (saveFile) {
+
+        const saveData =
+            JSON.parse(saveFile);
+
+        this.scene.start(saveData.scene);
+
+    } else {
+
+        this.scene.start('Level1Scene');
+
+    }
+
+}
 
         if (text === 'SETTINGS') {
 
@@ -549,34 +572,51 @@ createSettingToggle(x, y, labelText, setting) {
     );
 
     toggle.input.cursor = 'pointer';
+toggle.on('pointerdown', () => {
 
-    toggle.on('pointerdown', () => {
+    if (setting === 'music') {
 
-        if (setting === 'music') {
+        this.musicEnabled =
+            !this.musicEnabled;
 
-            this.musicEnabled =
-                !this.musicEnabled;
+        localStorage.setItem(
+            'C2C_MUSIC',
+            this.musicEnabled
+        );
 
-            localStorage.setItem(
-                'C2C_MUSIC',
-                this.musicEnabled
-            );
+        const music = this.sound.get('gameMusic');
 
-        } else {
+        if (music) {
 
-            this.soundEnabled =
-                !this.soundEnabled;
+            if (this.musicEnabled) {
 
-            localStorage.setItem(
-                'C2C_SOUND',
-                this.soundEnabled
-            );
+                if (!music.isPlaying) {
+                    music.play();
+                }
+
+            } else {
+
+                music.stop();
+
+            }
 
         }
 
-        updateToggle();
+    } else {
 
-    });
+        this.soundEnabled =
+            !this.soundEnabled;
+
+        localStorage.setItem(
+            'C2C_SOUND',
+            this.soundEnabled
+        );
+
+    }
+
+    updateToggle();
+
+});
 
     this.settingsObjects =
         this.settingsObjects || [];

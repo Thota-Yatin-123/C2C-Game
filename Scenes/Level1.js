@@ -6,6 +6,8 @@ class Level1Scene extends Phaser.Scene {
 
     create() {
 
+        this.sound.pauseOnBlur = false;
+
         const worldWidth = 2000;
         const worldHeight = 1400;
 
@@ -23,6 +25,14 @@ class Level1Scene extends Phaser.Scene {
             worldHeight
         );
 
+
+
+        /*
+         * =================================
+         * BACKGROUND
+         * =================================
+         */
+
         this.add.rectangle(
             worldWidth / 2,
             worldHeight / 2,
@@ -31,28 +41,64 @@ class Level1Scene extends Phaser.Scene {
             0x2d3a27
         );
 
+        /*
+         * =================================
+         * ROADS
+         * =================================
+         */
+
         const roadColor = 0xb0c4de;
 
         this.roads = [];
 
         this.roads.push(
-            this.add.rectangle(1020, 950, 70, 700, roadColor)
+            this.add.rectangle(
+                1020,
+                950,
+                70,
+                700,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(1100, 950, 70, 700, roadColor)
+            this.add.rectangle(
+                1100,
+                950,
+                70,
+                700,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(503, 375, 50, 350, roadColor)
+            this.add.rectangle(
+                503,
+                375,
+                50,
+                350,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(1375, 734, 70, 1069, roadColor)
+            this.add.rectangle(
+                1375,
+                734,
+                70,
+                1069,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(1800, 725, 50, 600, roadColor)
+            this.add.rectangle(
+                1800,
+                725,
+                50,
+                600,
+                roadColor
+            )
         );
 
         const road1 = this.add.rectangle(
@@ -154,24 +200,60 @@ class Level1Scene extends Phaser.Scene {
         this.roads.push(road7);
 
         this.roads.push(
-            this.add.rectangle(1000, 609, 750, 50, roadColor)
+            this.add.rectangle(
+                1000,
+                609,
+                750,
+                50,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(930, 225, 850, 50, roadColor)
+            this.add.rectangle(
+                930,
+                225,
+                850,
+                50,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(1600, 1000, 400, 50, roadColor)
+            this.add.rectangle(
+                1600,
+                1000,
+                400,
+                50,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(2000, 450, 400, 50, roadColor)
+            this.add.rectangle(
+                2000,
+                450,
+                400,
+                50,
+                roadColor
+            )
         );
 
         this.roads.push(
-            this.add.rectangle(750, 1100, 550, 56, roadColor)
+            this.add.rectangle(
+                750,
+                1100,
+                550,
+                56,
+                roadColor
+            )
         );
+
+        /*
+         * =================================
+         * BUILDINGS
+         * =================================
+         */
 
         const buildingColor = 0x55504a;
 
@@ -239,7 +321,11 @@ class Level1Scene extends Phaser.Scene {
             Phaser.Math.DegToRad(-10)
         );
 
-        this.createBuildingGlows();
+        /*
+         * =================================
+         * PLAYER
+         * =================================
+         */
 
         this.player = this.add.rectangle(
             1020,
@@ -249,9 +335,19 @@ class Level1Scene extends Phaser.Scene {
             0xff0000
         );
 
-        this.physics.add.existing(this.player);
+        this.physics.add.existing(
+            this.player
+        );
 
-        this.player.body.setCollideWorldBounds(true);
+        this.player.body.setCollideWorldBounds(
+            true
+        );
+
+        /*
+         * =================================
+         * MOVEMENT KEYS
+         * =================================
+         */
 
         this.cursors =
             this.input.keyboard.createCursorKeys();
@@ -264,227 +360,598 @@ class Level1Scene extends Phaser.Scene {
                 D: Phaser.Input.Keyboard.KeyCodes.D
             });
 
+        /*
+         * =================================
+         * INTERACTION KEY
+         * =================================
+         */
+
+        this.interactKey =
+            this.input.keyboard.addKey(
+                Phaser.Input.Keyboard.KeyCodes.E
+            );
+
+        /*
+         * =================================
+         * CAMERA
+         * =================================
+         */
+
         this.cameras.main.startFollow(
             this.player,
             true
         );
 
-        this.darkness = this.add.graphics();
+        /*
+         * =================================
+         * DARKNESS
+         * =================================
+         */
+
+        this.darkness =
+            this.add.graphics();
+
         this.darkness.setScrollFactor(0);
         this.darkness.setDepth(1000);
 
-        this.flashlight = this.add.graphics();
+        /*
+         * =================================
+         * FLASHLIGHT
+         * =================================
+         */
+
+        this.flashlight =
+            this.add.graphics();
+
         this.flashlight.setScrollFactor(0);
         this.flashlight.setDepth(1001);
 
         this.facingX = 0;
         this.facingY = -1;
 
+        /*
+         * =================================
+         * GAME PAUSE STATE
+         * =================================
+         */
+
+        this.gamePaused = false;
+
+
+/*
+ * =================================
+ * INTERACTION LOCATION
+ * =================================
+ */
+
+this.interactionX = 1050;
+this.interactionY = 1000;
+
+this.interactionX2 = 1600;
+this.interactionY2 = 1000;
+this.subwayUnlocked = false;
+
+
+
+
+        /*
+         * =================================
+         * INTERACTION PROMPT
+         * =================================
+         */
+
+        this.interactionPrompt =
+            this.add.text(
+                0,
+                0,
+                '[ E ] INTERACT',
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '18px',
+                    fontStyle: 'bold',
+                    color: '#ffffff',
+                    backgroundColor: '#000000',
+
+                    padding: {
+                        left: 10,
+                        right: 10,
+                        top: 6,
+                        bottom: 6
+                    }
+                }
+            );
+
+        this.interactionPrompt.setOrigin(0.5);
+
+        this.interactionPrompt.setScrollFactor(0);
+
+        this.interactionPrompt.setDepth(2000);
+
+        this.interactionPrompt.setVisible(false);
+
+        /*
+         * =================================
+         * SAMOLE HORROR GAME IFRAME
+         * =================================
+         */
+
+        this.samoleFrame = null;
+        this.samoleLoaded = false;
+
+        /*
+         * =================================
+         * MESSAGE FROM SAMOLE
+         * =================================
+         */
+
+        this.samoleMessageHandler = (event) => {
+
+    /*
+     * =================================
+     * ALL KEYS COLLECTED
+     * =================================
+     */
+
+    if (
+        event.data &&
+        event.data.type === 'SAMOLE_KEYS_COLLECTED'
+    ) {
+
+        this.subwayUnlocked = true;
+
+        return;
     }
 
-createBuildingGlows() {
 
-    this.buildingGlows = [];
+    /*
+     * =================================
+     * SAMOLE ESCAPED
+     * =================================
+     */
 
-    const glowPositions = [
-        [780, 350],
-        [900, 350],
-        [1020, 350],
-        [1140, 350],
-        [1260, 350],
-        [1380, 350],
-
-        [1240, 780],
-        [1240, 850],
-        [1240, 1000],
-        [1240, 1080],
-
-        [680, 880],
-        [760, 880],
-        [840, 880],
-        [900, 980],
-
-        [520, 1180],
-        [580, 1180],
-        [520, 1250],
-        [580, 1300],
-
-        [1900, 540],
-        [1980, 540],
-        [2070, 540],
-
-        [1900, 820],
-        [2000, 820],
-        [2090, 820],
-
-        [1000, 1400],
-        [1100, 1400],
-        [1200, 1400],
-        [1300, 1400]
-    ];
-
-    for (const [x, y] of glowPositions) {
-
-        const glow = this.add.rectangle(
-            x,
-            y,
-            12,
-            18,
-            0xffb347,
-            0
-        );
-
-        glow.setDepth(1010);
-
-        glow.setBlendMode(
-            Phaser.BlendModes.ADD
-        );
-
-        this.buildingGlows.push(glow);
+    if (
+        !event.data ||
+        event.data.type !== 'SAMOLE_ESCAPE'
+    ) {
+        return;
     }
 
-    this.time.addEvent({
-        delay: 700,
-        loop: true,
-        callback: () => {
+    // Everything below this stays exactly as it is.
 
-            const glow =
-                Phaser.Utils.Array.GetRandom(
-                    this.buildingGlows
-                );
+            /*
+             * Hide SAMOLE.
+             */
 
-            if (glow.alpha > 0) {
+            if (this.samoleFrame) {
 
-                this.tweens.add({
-                    targets: glow,
-                    alpha: 0,
-                    duration: Phaser.Math.Between(100, 400)
-                });
-
-            } else {
-
-                this.tweens.add({
-                    targets: glow,
-                    alpha: Phaser.Math.FloatBetween(0.5, 0.9),
-                    duration: Phaser.Math.Between(100, 300),
-                    yoyo: true,
-                    hold: Phaser.Math.Between(500, 2000)
-                });
+                this.samoleFrame.style.display =
+                    'none';
 
             }
 
-        }
-    });
+            /*
+             * Resume Level 1.
+             */
 
-}
+            this.gamePaused = false;
 
-    isOnRoad(x, y) {
+            this.physics.resume();
 
-        const halfWidth = 10;
-        const halfHeight = 10;
+            if (this.input.keyboard) {
 
-        const points = [
-            { x: x - halfWidth, y: y - halfHeight },
-            { x: x + halfWidth, y: y - halfHeight },
-            { x: x - halfWidth, y: y + halfHeight },
-            { x: x + halfWidth, y: y + halfHeight },
-            { x: x, y: y }
+                this.input.keyboard.enabled =
+                    true;
+
+            }
+
+            if (
+                this.player &&
+                this.player.body
+            ) {
+
+                this.player.body.setVelocity(
+                    0,
+                    0
+                );
+
+            }
+
+            /*
+             * Focus Phaser again.
+             */
+
+            this.game.canvas.focus();
+
+        };
+
+        window.addEventListener(
+            'message',
+            this.samoleMessageHandler
+        );
+
+        this.gamePaused = false;
+
+        this.physics.resume();
+
+    }
+
+
+    /*
+     * =================================
+     * BUILDING GLOWS
+     * =================================
+     */
+
+    createBuildingGlows() {
+
+        this.buildingGlows = [];
+
+        const glowPositions = [
+
+            [780, 350],
+            [900, 350],
+            [1020, 350],
+            [1140, 350],
+            [1260, 350],
+            [1380, 350],
+
+            [1240, 780],
+            [1240, 850],
+            [1240, 1000],
+            [1240, 1080],
+
+            [680, 880],
+            [760, 880],
+            [840, 880],
+            [900, 980],
+
+            [520, 1180],
+            [580, 1180],
+            [520, 1250],
+            [580, 1300],
+
+            [1900, 540],
+            [1980, 540],
+            [2070, 540],
+
+            [1900, 820],
+            [2000, 820],
+            [2090, 820],
+
+            [1000, 1400],
+            [1100, 1400],
+            [1200, 1400],
+            [1300, 1400]
+
         ];
 
-        for (const road of this.roads) {
+        for (
+            const [x, y]
+            of glowPositions
+        ) {
 
-            const cos = Math.cos(-road.rotation);
-            const sin = Math.sin(-road.rotation);
+            const glow =
+                this.add.rectangle(
+                    x,
+                    y,
+                    12,
+                    18,
+                    0xffb347,
+                    0
+                );
 
-            let insideCount = 0;
+            glow.setAlpha(0.15);
 
-            for (const point of points) {
+            glow.setDepth(1010);
 
-                const dx = point.x - road.x;
-                const dy = point.y - road.y;
+            glow.setBlendMode(
+                Phaser.BlendModes.ADD
+            );
 
-                const rotatedX =
-                    dx * cos - dy * sin + road.x;
+            this.buildingGlows.push(
+                glow
+            );
 
-                const rotatedY =
-                    dx * sin + dy * cos + road.y;
+        }
 
-                if (
-                    rotatedX >= road.x - road.width / 2 &&
-                    rotatedX <= road.x + road.width / 2 &&
-                    rotatedY >= road.y - road.height / 2 &&
-                    rotatedY <= road.y + road.height / 2
-                ) {
-                    insideCount++;
+        this.time.addEvent({
+
+            delay: 700,
+
+            loop: true,
+
+            callback: () => {
+
+                const glow =
+                    Phaser.Utils.Array.GetRandom(
+                        this.buildingGlows
+                    );
+
+                if (glow.alpha > 0) {
+
+                    this.tweens.add({
+
+                        targets: glow,
+
+                        alpha: 0,
+
+                        duration:
+                            Phaser.Math.Between(
+                                100,
+                                400
+                            )
+
+                    });
+
+                } else {
+
+                    this.tweens.add({
+
+                        targets: glow,
+
+                        alpha:
+                            Phaser.Math.FloatBetween(
+                                0.08,
+                                0.25
+                            ),
+
+                        duration:
+                            Phaser.Math.Between(
+                                100,
+                                300
+                            ),
+
+                        yoyo: true,
+
+                        hold:
+                            Phaser.Math.Between(
+                                500,
+                                2000
+                            )
+
+                    });
+
                 }
 
             }
 
-            if (insideCount >= 3) {
-                return true;
+        });
+
+    }
+
+
+    /*
+     * =================================
+     * CHECK IF PLAYER IS ON ROAD
+     * =================================
+     */
+
+    isOnRoad(x, y) {
+
+        const halfSize = 10;
+
+        const points = [
+
+            {
+                x: x - halfSize,
+                y: y - halfSize
+            },
+
+            {
+                x: x + halfSize,
+                y: y - halfSize
+            },
+
+            {
+                x: x - halfSize,
+                y: y + halfSize
+            },
+
+            {
+                x: x + halfSize,
+                y: y + halfSize
+            },
+
+            {
+                x: x,
+                y: y
             }
+
+        ];
+
+        for (
+            const road of this.roads
+        ) {
+
+            const cos =
+                Math.cos(
+                    -road.rotation
+                );
+
+            const sin =
+                Math.sin(
+                    -road.rotation
+                );
+
+            let insideCount = 0;
+
+            for (
+                const point
+                of points
+            ) {
+
+                const dx =
+                    point.x -
+                    road.x;
+
+                const dy =
+                    point.y -
+                    road.y;
+
+                const rotatedX =
+                    dx * cos -
+                    dy * sin;
+
+                const rotatedY =
+                    dx * sin +
+                    dy * cos;
+
+                if (
+
+                    rotatedX >=
+                    -road.width / 2 &&
+
+                    rotatedX <=
+                    road.width / 2 &&
+
+                    rotatedY >=
+                    -road.height / 2 &&
+
+                    rotatedY <=
+                    road.height / 2
+
+                ) {
+
+                    insideCount++;
+
+                }
+
+            }
+
+            /*
+             * Require at least 3 points
+             * to be inside the road.
+             */
+
+            if (
+                insideCount >= 3
+            ) {
+
+                return true;
+
+            }
+
         }
 
         return false;
+
     }
 
+
+    /*
+     * =================================
+     * UPDATE
+     * =================================
+     */
+
     update() {
+
+        /*
+         * Stop gameplay after interaction.
+         */
+
+        if (this.gamePaused) {
+
+            return;
+
+        }
 
         const speed = 300;
 
         let velocityX = 0;
         let velocityY = 0;
 
+        /*
+         * =================================
+         * MOVEMENT INPUT
+         * =================================
+         */
+
         if (
             this.cursors.left.isDown ||
             this.keys.A.isDown
         ) {
+
             velocityX = -speed;
+
         }
 
         if (
             this.cursors.right.isDown ||
             this.keys.D.isDown
         ) {
+
             velocityX = speed;
+
         }
 
         if (
             this.cursors.up.isDown ||
             this.keys.W.isDown
         ) {
+
             velocityY = -speed;
+
         }
 
         if (
             this.cursors.down.isDown ||
             this.keys.S.isDown
         ) {
+
             velocityY = speed;
+
         }
 
-        if (velocityX !== 0 && velocityY !== 0) {
+        /*
+         * =================================
+         * DIAGONAL MOVEMENT
+         * =================================
+         */
 
-            const length = Math.sqrt(
-                velocityX * velocityX +
-                velocityY * velocityY
-            );
+        if (
+            velocityX !== 0 &&
+            velocityY !== 0
+        ) {
+
+            const length =
+                Math.sqrt(
+                    velocityX * velocityX +
+                    velocityY * velocityY
+                );
 
             velocityX =
-                (velocityX / length) * speed;
+                (velocityX / length) *
+                speed;
 
             velocityY =
-                (velocityY / length) * speed;
+                (velocityY / length) *
+                speed;
+
         }
+
+        /*
+         * =================================
+         * NEXT POSITION
+         * =================================
+         */
 
         const delta =
             this.game.loop.delta / 1000;
 
         const nextX =
-            this.player.x + velocityX * delta;
+            this.player.x +
+            velocityX * delta;
 
         const nextY =
-            this.player.y + velocityY * delta;
+            this.player.y +
+            velocityY * delta;
+
+        /*
+         * =================================
+         * ROAD-ONLY MOVEMENT
+         * =================================
+         */
 
         if (
             velocityX !== 0 ||
@@ -492,7 +959,10 @@ createBuildingGlows() {
         ) {
 
             if (
-                this.isOnRoad(nextX, nextY)
+                this.isOnRoad(
+                    nextX,
+                    nextY
+                )
             ) {
 
                 this.player.body.setVelocity(
@@ -502,23 +972,135 @@ createBuildingGlows() {
 
             } else {
 
-                this.player.body.setVelocity(0, 0);
+                this.player.body.setVelocity(
+                    0,
+                    0
+                );
 
             }
 
         } else {
 
-            this.player.body.setVelocity(0, 0);
+            this.player.body.setVelocity(
+                0,
+                0
+            );
 
         }
+
+        /*
+         * =================================
+         * INTERACTION
+         * =================================
+         */
+
+const distanceToBuilding =
+    Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.interactionX,
+        this.interactionY
+    );
+
+const distance2 =
+    Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.interactionX2,
+        this.interactionY2
+    );
+
+const canInteract =
+    distanceToBuilding < 40;
+
+const canInteract2 =
+    distance2 < 60;
+
+
+/*
+ * =================================
+ * INTERACTION PROMPT
+ * =================================
+ */
+
+if (canInteract || canInteract2) {
+
+    this.interactionPrompt.setVisible(true);
+
+    const screenX =
+        this.player.x -
+        this.cameras.main.scrollX;
+
+    const screenY =
+        this.player.y -
+        this.cameras.main.scrollY;
+
+    this.interactionPrompt.setPosition(
+        screenX,
+        screenY - 45
+    );
+
+} else {
+
+    this.interactionPrompt.setVisible(false);
+
+}
+
+
+/*
+ * =================================
+ * PRESS E
+ * =================================
+ */
+
+/*
+ * First interaction → SAMOLE
+ */
+
+if (
+    canInteract &&
+    Phaser.Input.Keyboard.JustDown(
+        this.interactKey
+    )
+) {
+
+    this.showTestScreen();
+
+    return;
+}
+
+
+/*
+ * Second interaction → NOTHING FOR NOW
+ */
+
+if (
+    canInteract2 &&
+    this.subwayUnlocked &&
+    Phaser.Input.Keyboard.JustDown(
+        this.interactKey
+    )
+) {
+
+    this.scene.start('SubwayTunnel1');
+
+    return;
+}
+        /*
+         * =================================
+         * DARKNESS
+         * =================================
+         */
 
         this.darkness.clear();
 
         const playerX =
-            this.player.x - this.cameras.main.scrollX;
+            this.player.x -
+            this.cameras.main.scrollX;
 
         const playerY =
-            this.player.y - this.cameras.main.scrollY;
+            this.player.y -
+            this.cameras.main.scrollY;
 
         this.darkness.fillStyle(
             0x000000,
@@ -532,19 +1114,45 @@ createBuildingGlows() {
             this.scale.height
         );
 
-        if (velocityX !== 0 || velocityY !== 0) {
+        /*
+         * =================================
+         * FACING DIRECTION
+         * =================================
+         */
 
-            this.facingX = velocityX;
-            this.facingY = velocityY;
+        if (
+            velocityX !== 0 ||
+            velocityY !== 0
+        ) {
 
-            const length = Math.sqrt(
-                this.facingX * this.facingX +
-                this.facingY * this.facingY
-            );
+            this.facingX =
+                velocityX;
 
-            this.facingX /= length;
-            this.facingY /= length;
+            this.facingY =
+                velocityY;
+
+            const length =
+                Math.sqrt(
+                    this.facingX *
+                    this.facingX +
+
+                    this.facingY *
+                    this.facingY
+                );
+
+            this.facingX /=
+                length;
+
+            this.facingY /=
+                length;
+
         }
+
+        /*
+         * =================================
+         * FLASHLIGHT
+         * =================================
+         */
 
         this.flashlight.clear();
 
@@ -553,30 +1161,39 @@ createBuildingGlows() {
 
         const endX =
             playerX +
-            this.facingX * flashlightLength;
+            this.facingX *
+            flashlightLength;
 
         const endY =
             playerY +
-            this.facingY * flashlightLength;
+            this.facingY *
+            flashlightLength;
 
-        const perpendicularX = -this.facingY;
-        const perpendicularY = this.facingX;
+        const perpendicularX =
+            -this.facingY;
+
+        const perpendicularY =
+            this.facingX;
 
         const leftX =
             endX +
-            perpendicularX * flashlightWidth;
+            perpendicularX *
+            flashlightWidth;
 
         const leftY =
             endY +
-            perpendicularY * flashlightWidth;
+            perpendicularY *
+            flashlightWidth;
 
         const rightX =
             endX -
-            perpendicularX * flashlightWidth;
+            perpendicularX *
+            flashlightWidth;
 
         const rightY =
             endY -
-            perpendicularY * flashlightWidth;
+            perpendicularY *
+            flashlightWidth;
 
         this.flashlight.fillStyle(
             0xffffcc,
@@ -605,5 +1222,137 @@ createBuildingGlows() {
         this.flashlight.fillPath();
 
     }
+
+
+    /*
+     * =================================
+     * START SAMOLE
+     * =================================
+     */
+
+    showTestScreen() {
+
+    /*
+     * =================================
+     * PREVENT MULTIPLE IFRAMES
+     * =================================
+     */
+
+    if (this.samoleFrame) {
+
+        this.gamePaused = true;
+
+        this.physics.pause();
+
+        this.interactionPrompt.setVisible(false);
+
+        this.samoleFrame.style.display = 'block';
+
+        this.samoleFrame.contentWindow.focus();
+
+        return;
+    }
+
+    /*
+     * =================================
+     * PAUSE LEVEL 1
+     * =================================
+     */
+
+    this.gamePaused = true;
+
+    this.physics.pause();
+
+    this.interactionPrompt.setVisible(false);
+
+    /*
+     * =================================
+     * CREATE SAMOLE IFRAME
+     * =================================
+     */
+
+    this.samoleFrame = document.createElement('iframe');
+
+    /*
+     * Allow Pointer Lock inside SAMOLE
+     */
+
+    this.samoleFrame.setAttribute(
+        'allow',
+        'pointer-lock'
+    );
+
+    this.samoleFrame.style.position = 'fixed';
+    this.samoleFrame.style.top = '0';
+    this.samoleFrame.style.left = '0';
+    this.samoleFrame.style.width = '100vw';
+    this.samoleFrame.style.height = '100vh';
+    this.samoleFrame.style.border = 'none';
+    this.samoleFrame.style.zIndex = '99999';
+    this.samoleFrame.style.display = 'block';
+    this.samoleFrame.style.background = '#000000';
+
+    /*
+     * Allow iframe to receive keyboard focus
+     */
+
+    this.samoleFrame.setAttribute(
+        'tabindex',
+        '-1'
+    );
+
+    /*
+     * Add iframe to page
+     */
+
+    document.body.appendChild(
+        this.samoleFrame
+    );
+
+    /*
+     * Load SAMOLE
+     */
+
+    this.samoleFrame.src = 'SAMOLE.html';
+
+    /*
+     * When SAMOLE loads, focus it
+     */
+
+    this.samoleFrame.addEventListener(
+        'load',
+        () => {
+
+            this.samoleLoaded = true;
+
+            this.samoleFrame.contentWindow.focus();
+
+            try {
+
+                const samoleDocument =
+                    this.samoleFrame.contentDocument;
+
+                if (
+                    samoleDocument &&
+                    samoleDocument.body
+                ) {
+
+                    samoleDocument.body.focus();
+
+                }
+
+            } catch (error) {
+
+                console.log(
+                    'SAMOLE focus:',
+                    error
+                );
+
+            }
+
+        }
+    );
+
+}
 
 }
