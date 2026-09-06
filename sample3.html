@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SJT Night Edition - Level 2 (FPS)</title>
+<style>
+  :root {
+    --void: #030305;
+    --bone: #cfc6b0;
+    --blood: #7a1414;
+    --bloodglow: #e01b1b;
+    --sjtblue: #0088ff;
+    --sjtyellow: #ffb700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--void);
+    overflow: hidden;
+    font-family: 'Courier New', Courier, monospace;
+    user-select: none;
+  }
+  #webgl-container { position: fixed; inset: 0; }
+  
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 15%, rgba(2,0,5,0.96) 100%);
+  }
+  #scan {
+    position: fixed; inset: 0; pointer-events: none; z-index: 6; opacity: 0.22;
+    background: repeating-linear-gradient(
+      to bottom, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px,
+      rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px
+    );
+    mix-blend-mode: overlay;
+  }
+
+  /* Crosshair */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 8px; height: 8px; z-index: 10; pointer-events: none;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(0, 180, 255, 0.85);
+  }
+  #crosshair::before { top: 3px; left: -6px; width: 20px; height: 2px; }
+  #crosshair::after { top: -6px; left: 3px; width: 2px; height: 20px; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    text-align: center; color: var(--bone);
+    background: radial-gradient(ellipse at center, rgba(8,12,24,0.88) 0%, rgba(2,1,5,0.98) 80%);
+    transition: opacity 0.8s ease;
+  }
+  .hidden { opacity: 0; pointer-events: none; }
+
+  .title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 50px; letter-spacing: 10px; color: var(--bone);
+    text-shadow: 0 0 22px rgba(0, 136, 255, 0.7);
+    animation: glitchTitle 4s infinite;
+  }
+  @keyframes glitchTitle {
+    0%, 90%, 100% { opacity: 1; transform: translate(0, 0); }
+    92% { opacity: 0.3; transform: translate(-3px, 2px); }
+    94% { opacity: 0.9; transform: translate(3px, -1px); }
+    96% { opacity: 0.2; transform: translate(-2px, -3px); }
+  }
+
+  .subtitle { margin-top: 12px; font-size: 12px; letter-spacing: 4px; color: #728da1; }
+  
+  .enter {
+    margin-top: 40px; padding: 14px 34px;
+    font-family: 'Courier New', monospace; font-size: 13px; letter-spacing: 3px;
+    color: var(--bone); background: transparent; border: 1px solid #1f4260;
+    cursor: pointer; transition: all 0.35s ease;
+  }
+  .enter:hover { border-color: var(--sjtblue); color: #fff; box-shadow: 0 0 28px rgba(0,136,255,0.5); }
+
+  .stagecard { font-size: 12px; letter-spacing: 5px; color: #527585; }
+  .stagecard .n {
+    display: block; font-family: Georgia, serif; font-size: 38px; letter-spacing: 6px;
+    color: var(--bone); margin-bottom: 10px;
+  }
+
+  #hud {
+    position: fixed; left: 22px; bottom: 20px; z-index: 8;
+    font-size: 11px; letter-spacing: 3px; color: #6e868d;
+  }
+
+  #shift-alert {
+    position: fixed; top: 85px; left: 50%; transform: translateX(-50%); z-index: 8;
+    font-size: 13px; letter-spacing: 4px; color: #ff3300; font-weight: bold;
+    text-shadow: 0 0 12px rgba(255,51,0,0.9); opacity: 0; transition: opacity 0.3s;
+    background: rgba(0,0,0,0.7); padding: 6px 16px; border: 1px solid #ff3300;
+  }
+  #ghost-alert {
+    position: fixed; top: 125px; left: 50%; transform: translateX(-50%); z-index: 8;
+    font-size: 12px; letter-spacing: 3px; color: #e01b1b; font-weight: bold;
+    text-shadow: 0 0 10px rgba(224,27,27,0.9); opacity: 0; transition: opacity 0.3s;
+    background: rgba(20,0,0,0.85); padding: 6px 16px; border: 1px solid #e01b1b;
+  }
+  #rule-alert {
+    position: fixed; top: 165px; left: 50%; transform: translateX(-50%); z-index: 8;
+    font-size: 12px; letter-spacing: 3px; color: #00ffcc; font-weight: bold;
+    text-shadow: 0 0 10px rgba(0,255,204,0.9); opacity: 0; transition: opacity 0.3s;
+    background: rgba(0,20,20,0.85); padding: 6px 16px; border: 1px solid #00ffcc;
+  }
+
+  #vision-decay {
+    position: fixed; top: 55px; left: 50%; transform: translateX(-50%); z-index: 8;
+    font-size: 10px; letter-spacing: 3px; color: #3da1a1; font-weight: bold;
+    text-shadow: 0 0 8px rgba(61,161,161,0.8);
+  }
+  #collectibles-hud {
+    position: fixed; right: 22px; top: 20px; z-index: 8;
+    font-size: 11px; letter-spacing: 2px; color: var(--sjtyellow);
+    text-shadow: 0 0 8px rgba(255,183,0,0.6);
+  }
+  #color-indicator {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 8;
+    font-size: 11px; letter-spacing: 4px; padding: 6px 16px; border: 1px solid rgba(0,136,255,0.4);
+    background: rgba(2,5,12,0.8); text-transform: uppercase; transition: color 0.3s, border-color 0.3s;
+  }
+  #deaths { position: fixed; right: 22px; bottom: 20px; z-index: 8; font-size: 11px; letter-spacing: 2px; color: #7c3a34; }
+  #controls { position: fixed; left: 22px; top: 20px; z-index: 8; font-size: 10px; letter-spacing: 2px; color: #384f5c; }
+
+  #click-prompt {
+    position: fixed; top: 60%; left: 50%; transform: translateX(-50%); z-index: 7;
+    font-size: 11px; letter-spacing: 3px; color: #4ba0a6; background: rgba(0,0,0,0.6);
+    padding: 6px 14px; border: 1px solid #0088ff; display: none; pointer-events: none;
+  }
+
+  .flash { position: fixed; inset: 0; z-index: 15; background: #0088ff; opacity: 0; pointer-events: none; transition: opacity 0.1s; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="webgl-container"></div>
+<div id="vignette"></div>
+<div id="scan"></div>
+<div id="crosshair"></div>
+<div class="flash" id="flash"></div>
+
+<div id="hud">VIT VELLORE · SJT VOID CHAMBER</div>
+<div id="shift-alert">⚠️ SJT FFCS TIMETABLE SHIFT DETECTED! MAP ALTERING! ⚠️</div>
+<div id="ghost-alert">⚠️ INACTIVITY DETECTED! GHOST WARDEN APPROACHING! ⚠️</div>
+<div id="rule-alert">⚠️ WEIRD RULE ACTIVATED ⚠️</div>
+<div id="color-indicator">ACTIVE FREQUENCY</div>
+<div id="vision-decay">ATTENDANCE: 100%</div>
+<div id="collectibles-hud">CAMPUS ITEMS: 0 / 5</div>
+<div id="deaths">0 BACKLOGS</div>
+<div id="controls">CLICK SCREEN TO LOCK MOUSE | WASD : MOVE | MOUSE : LOOK | SPACE : JUMP</div>
+<div id="click-prompt">CLICK TO LOCK CURSOR</div>
+
+<div class="overlay" id="menu">
+  <div class="title">ENTER SJT AT NIGHT</div>
+  <div class="subtitle">SJT FFCS SHIFT NIGHTMARE</div>
+  <button class="enter" id="enterBtn">ENTER SJT AT NIGHT</button>
+</div>
+
+<div class="overlay hidden" id="stageIntro">
+  <div class="stagecard"><span class="n">LEVEL 2</span>SJT - CENTRAL ATRIUM ZONE</div>
+</div>
+
+<div class="overlay hidden" id="loseScreen" style="background: radial-gradient(ellipse at center, rgba(30,0,0,0.92) 0%, rgba(2,0,5,0.98) 85%);">
+  <div class="title" style="font-size:42px; color:var(--bloodglow); text-shadow: 0 0 22px rgba(224,27,27,0.9);">YOU WERE CONSUMED</div>
+  <div id="scaryText" style="font-size:13px; letter-spacing:3px; color:#cfc6b0; margin-top:25px; max-width:650px; line-height:1.8; text-align:center; text-shadow:0 0 8px rgba(224,27,27,0.5);">YOU FELL INTO THE SJT VOID. NO REGISTERED FLOOR REMAINS.</div>
+  <button class="enter" id="retryBtn" style="margin-top:35px; border-color:var(--blood); color:#e01b1b;">RESPAWN INTO NIGHTMARE</button>
+</div>
+
+<div class="overlay hidden" id="winScreen">
+  <div class="title" style="font-size:46px;letter-spacing:8px;color:#ffb700;">WELL DONE</div>
+  <div id="outpassMsg" style="font-size:20px; letter-spacing:3px; color:#00ff88; margin-top:20px; font-weight:bold; text-shadow: 0 0 12px rgba(0,255,136,0.6);">You have successfully received the outpass</div>
+  <div id="winStats" style="font-size:18px; letter-spacing:4px; color:#0088ff; margin-top:15px; font-weight:bold;">ITEMS COLLECTED: 5 / 5</div>
+  <button class="enter" id="restartBtn" style="margin-top:30px;">PLAY AGAIN (RESTART)</button>
+</div>
+
+<script>
+(function(){
+  // --- SYNTHESIZED HORROR MUSIC & SOUND ENGINE ---
+  let actx = null, droneGain, droneOsc1, droneOsc2, heartbeatInterval = null;
+  let musicArpInterval = null, stingerInterval = null;
+
+  function initAudio(){
+    if(!actx){
+      actx = new (window.AudioContext||window.webkitAudioContext)();
+    } else if(actx.state === 'suspended'){
+      actx.resume();
+    }
+    
+    if(!droneGain){
+      droneGain = actx.createGain(); 
+      droneGain.gain.value = 0.08;
+      
+      droneOsc1 = actx.createOscillator(); droneOsc1.type = 'sawtooth'; droneOsc1.frequency.value = 36.71;
+      droneOsc2 = actx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 38.89;
+      
+      const filter = actx.createBiquadFilter();
+      filter.type = 'lowpass'; 
+      filter.frequency.value = 160;
+
+      const lfo = actx.createOscillator();
+      lfo.frequency.value = 0.18; 
+      const lfoGain = actx.createGain();
+      lfoGain.gain.value = 90;
+      lfo.connect(filter.frequency);
+      lfo.start();
+
+      droneOsc1.connect(filter); droneOsc2.connect(filter);
+      filter.connect(droneGain); droneGain.connect(actx.destination);
+      
+      droneOsc1.start(); droneOsc2.start();
+    }
+    
+    startHeartbeat();
+    startCreepyMusic();
+  }
+
+  function startCreepyMusic(){
+    if(musicArpInterval) clearInterval(musicArpInterval);
+    if(stingerInterval) clearInterval(stingerInterval);
+
+    const spookyNotes = [130.81, 138.59, 155.56, 185.00, 196.00, 261.63, 277.18, 311.13, 369.99, 523.25];
+
+    musicArpInterval = setInterval(() => {
+      if(!actx || actx.state === 'suspended') return;
+      if(Math.random() < 0.65) {
+        const freq = spookyNotes[Math.floor(Math.random() * spookyNotes.length)];
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+
+        osc.type = Math.random() > 0.4 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, actx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * (0.97 + Math.random() * 0.05), actx.currentTime + 1.4);
+
+        gain.gain.setValueAtTime(0.025, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 1.6);
+
+        osc.connect(gain);
+        gain.connect(actx.destination);
+
+        osc.start();
+        osc.stop(actx.currentTime + 1.7);
+      }
+    }, 450);
+
+    stingerInterval = setInterval(() => {
+      if(!actx || actx.state === 'suspended') return;
+      if(Math.random() < 0.7) {
+        const baseF = 784.00 + Math.random() * 300; 
+        const detuneF = baseF * 1.414; 
+
+        [baseF, detuneF].forEach(f => {
+          const osc = actx.createOscillator();
+          const g = actx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = f;
+          g.gain.setValueAtTime(0.02, actx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 2.5);
+
+          osc.connect(g);
+          g.connect(actx.destination);
+          osc.start();
+          osc.stop(actx.currentTime + 2.6);
+        });
+      }
+    }, 6000);
+  }
+
+  function stopAllAudio(){
+    if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    if(musicArpInterval){ clearInterval(musicArpInterval); musicArpInterval = null; }
+    if(stingerInterval){ clearInterval(stingerInterval); stingerInterval = null; }
+    if(actx && actx.state !== 'suspended'){
+      actx.suspend();
+    }
+  }
+
+  function blip(freq, dur, type, vol){
+    if(!actx || actx.state === 'suspended') return;
+    const o = actx.createOscillator(); const g = actx.createGain();
+    o.type = type||'sine'; o.frequency.value = freq;
+    g.gain.value = vol||0.1;
+    o.connect(g); g.connect(actx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+dur);
+    o.stop(actx.currentTime+dur+0.02);
+  }
+
+  function playItemChime(){
+    if(!actx || actx.state === 'suspended') return;
+    blip(523.25, 0.1, 'triangle', 0.2);
+    setTimeout(()=>blip(659.25, 0.1, 'triangle', 0.2), 80);
+    setTimeout(()=>blip(783.99, 0.2, 'triangle', 0.25), 160);
+  }
+
+  function playShiftSound(){
+    if(!actx || actx.state === 'suspended') return;
+    noiseBurst(0.4, 0.3);
+    blip(150, 0.3, 'sawtooth', 0.3);
+  }
+
+  function playHeartbeat(){
+    if(!actx || actx.state === 'suspended') return;
+    blip(52, 0.14, 'sine', 0.18);
+    setTimeout(()=>blip(42, 0.18, 'sine', 0.14), 160);
+  }
+
+  function startHeartbeat(){
+    if(heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(playHeartbeat, 1200);
+  }
+
+  function noiseBurst(dur, vol){
+    if(!actx || actx.state === 'suspended') return;
+    const bufferSize = actx.sampleRate * dur;
+    const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+    const src = actx.createBufferSource(); src.buffer = buffer;
+    const g = actx.createGain(); g.gain.value = vol||0.4;
+    src.connect(g); g.connect(actx.destination);
+    src.start();
+  }
+
+  function playMonsterGroan(){
+    if(!actx || actx.state === 'suspended') return;
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(65, actx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, actx.currentTime + 2.5);
+    
+    const filter = actx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(220, actx.currentTime);
+
+    g.gain.setValueAtTime(0.25, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 2.5);
+
+    osc.connect(filter);
+    filter.connect(g);
+    g.connect(actx.destination);
+    osc.start();
+    osc.stop(actx.currentTime + 2.6);
+  }
+
+  // --- GAME STATE & TIMERS ---
+  let state = 'menu';
+  let deaths = 0;
+  let levelTime = 0; 
+  let mapShiftTimer = 0;
+  let nextMapShiftTime = 25 + Math.random() * 15;
+  let collectedCount = 0;
+  let idleTimer = 0;
+  let lastGroanTime = 0;
+  let invertTimer = 0; // Controls inversion timer
+  const TOTAL_ITEMS = 5;
+  const DECAY_DURATION = 90;
+
+  const deathsEl = document.getElementById('deaths');
+  const colorIndEl = document.getElementById('color-indicator');
+  const shiftAlertEl = document.getElementById('shift-alert');
+  const ghostAlertEl = document.getElementById('ghost-alert');
+  const ruleAlertEl = document.getElementById('rule-alert');
+  const visionDecayEl = document.getElementById('vision-decay');
+  const collectiblesHudEl = document.getElementById('collectibles-hud');
+  const clickPrompt = document.getElementById('click-prompt');
+  const flashEl = document.getElementById('flash');
+
+  const COLOR_PALETTE = [
+    { name: 'SJT CYAN FREQUENCY', hex: 0x0088ff, css: '#0088ff' },
+    { name: 'SJT AMBER FREQUENCY', hex: 0xffb700, css: '#ffb700' },
+    { name: 'SJT CRIMSON FREQUENCY', hex: 0xe01b1b, css: '#e01b1b' },
+    { name: 'SJT NEON TRAMPOLINE', hex: 0x00ff66, css: '#00ff66' },
+    { name: 'SJT HYPER SLICK', hex: 0x00f0ff, css: '#00f0ff' },
+    { name: 'SJT CRUMBLING VOID', hex: 0xff0055, css: '#ff0055' },
+    { name: 'SJT QUANTUM WARP', hex: 0xaa00ff, css: '#aa00ff' },
+    { name: 'SJT DISTORTION MATRIX', hex: 0xffee00, css: '#ffee00' }
+  ];
+
+  let targetPlatIndex = 1;
+  let vanishTimer = 0;
+  const BLINK_START = 3.0;
+  const SOLID_START = 3.8;
+
+  // --- THREE.JS SCENE & FPS SETUP ---
+  const container = document.getElementById('webgl-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x030308);
+  scene.fog = new THREE.FogExp2(0x030308, 0.012);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.rotation.order = 'YXZ';
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  // MOUSE LOOK & POINTER LOCK
+  let yaw = 0, pitch = 0;
+
+  container.addEventListener('click', () => {
+    if(state === 'playing') renderer.domElement.requestPointerLock();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    if(document.pointerLockElement === renderer.domElement){
+      clickPrompt.style.display = 'none';
+    } else if(state === 'playing'){
+      clickPrompt.style.display = 'block';
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if(document.pointerLockElement === renderer.domElement && state === 'playing'){
+      const sensitivity = 0.0022;
+      yaw -= e.movementX * sensitivity;
+      pitch -= e.movementY * sensitivity;
+      pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
+    }
+  });
+
+  // Lighting
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.15);
+  scene.add(ambLight);
+
+  const chamberLight = new THREE.PointLight(COLOR_PALETTE[0].hex, 3.0, 180);
+  chamberLight.position.set(0, 25, -50);
+  chamberLight.castShadow = true;
+  scene.add(chamberLight);
+
+  const playerLight = new THREE.PointLight(0x0088ff, 1.4, 18);
+  scene.add(playerLight);
+
+  // --- BUILD SJT BACKGROUND ---
+  function buildSJTBackground(){
+    const bgGroup = new THREE.Group();
+
+    const sjtGeo = new THREE.BoxGeometry(32, 110, 22);
+    const sjtMat = new THREE.MeshStandardMaterial({ color: 0x0a0f1d, roughness: 0.9 });
+    const sjt = new THREE.Mesh(sjtGeo, sjtMat);
+    sjt.position.set(0, 35, -140);
+    bgGroup.add(sjt);
+
+    const wingGeo = new THREE.BoxGeometry(18, 80, 14);
+    const sjtWingL = new THREE.Mesh(wingGeo, sjtMat);
+    sjtWingL.position.set(-32, 25, -130);
+    sjtWingL.rotation.y = 0.4;
+    bgGroup.add(sjtWingL);
+
+    const sjtWingR = new THREE.Mesh(wingGeo, sjtMat);
+    sjtWingR.position.set(32, 25, -130);
+    sjtWingR.rotation.y = -0.4;
+    bgGroup.add(sjtWingR);
+
+    for(let y=0; y<75; y+=8){
+      for(let x=-12; x<=12; x+=4){
+        const win = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.8, 2.5),
+          new THREE.MeshBasicMaterial({ color: (Math.random()>0.35)?0x0088ff:0xffb700, side: THREE.DoubleSide })
+        );
+        win.position.set(x, y - 10, -128.8);
+        bgGroup.add(win);
+      }
+    }
+
+    for(let i = -2; i <= 2; i++){
+      const pillarGeo = new THREE.CylinderGeometry(1.5, 1.5, 90, 12);
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x121d33, roughness: 0.7 });
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(i * 18, 25, -118);
+      bgGroup.add(pillar);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#020510'; ctx.fillRect(0, 0, 512, 128);
+    ctx.font = 'bold 38px Courier New'; ctx.fillStyle = '#0088ff';
+    ctx.fillText('SILVER JUBILEE TOWER', 20, 55);
+    ctx.font = '22px Courier New'; ctx.fillStyle = '#ffb700';
+    ctx.fillText('SJT VOID ATRIUM', 150, 95);
+
+    const signTex = new THREE.CanvasTexture(canvas);
+    const signMat = new THREE.MeshBasicMaterial({ map: signTex, transparent: true, opacity: 0.9 });
+    const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(38, 9.5), signMat);
+    signMesh.position.set(0, 32, -117);
+    bgGroup.add(signMesh);
+
+    scene.add(bgGroup);
+  }
+  buildSJTBackground();
+
+  // --- GHOST WARDEN CREATION ---
+  const ghostGroup = new THREE.Group();
+  
+  const ghostMat = new THREE.MeshBasicMaterial({ color: 0xe01b1b, wireframe: true, transparent: true, opacity: 0.75 });
+  const ghostBody = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.2, 12), ghostMat);
+  ghostBody.rotation.x = Math.PI;
+  ghostGroup.add(ghostBody);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const eyeGeo = new THREE.SphereGeometry(0.18, 8, 8);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-0.35, -0.4, 0.6);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(0.35, -0.4, 0.6);
+  ghostGroup.add(eyeL, eyeR);
+
+  const ghostLight = new THREE.PointLight(0xe01b1b, 2.5, 12);
+  ghostLight.position.set(0, 0, 0);
+  ghostGroup.add(ghostLight);
+
+  ghostGroup.visible = false;
+  scene.add(ghostGroup);
+
+  // --- WORLD OBJECTS & PLATFORMS ---
+  const platforms = [];
+
+  function createPlatMaterials(hexColor){
+    return {
+      active: new THREE.MeshStandardMaterial({
+        color: hexColor, emissive: hexColor, emissiveIntensity: 0.5,
+        roughness: 0.3, metalness: 0.2
+      }),
+      inactive: new THREE.MeshBasicMaterial({
+        color: hexColor, wireframe: true, transparent: true, opacity: 0.85
+      })
+    };
+  }
+
+  function addPlatform(x, y, z, w, h, d, colorIdx, isBase, specialRule = 'none'){
+    const geo = new THREE.BoxGeometry(w, h, d);
+    let mats = null, mesh = null;
+
+    if(isBase){
+      const mat = new THREE.MeshStandardMaterial({ color: 0x121a24, roughness: 0.8 });
+      mesh = new THREE.Mesh(geo, mat);
+    } else {
+      mats = createPlatMaterials(COLOR_PALETTE[colorIdx].hex);
+      mesh = new THREE.Mesh(geo, mats.inactive);
+    }
+
+    mesh.position.set(x, y, z);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    scene.add(mesh);
+
+    const platObj = {
+      mesh, x, y, z, baseX: x, baseY: y, baseZ: z,
+      w, h, d, origW: w, origD: d, rotation: 0,
+      dx: 0, dy: 0, dRot: 0,
+      colorIdx, isBase, mats,
+      isActive: isBase,
+      specialRule,
+      moveType: 'none', moveSpeed: 1.0, moveRange: 1.5,
+      crumbleHealth: 1.0
+    };
+    platforms.push(platObj);
+    return platObj;
+  }
+
+  // Start Platform (Safe Zone)
+  addPlatform(0, 0, 2, 9, 1, 7, -1, true);
+
+  // 15 ACTION TILES (Including 5 custom tiles with weird rules)
+  const platformSlotConfigs = [
+    { z: -6,   baseX: 0.0,  baseY: 0.0, specialRule: 'none' },
+    { z: -12,  baseX: 3.5,  baseY: 0.2, specialRule: 'none' },
+    { z: -18,  baseX: -3.5, baseY: 0.4, specialRule: 'none' },
+    { z: -24,  baseX: 0.0,  baseY: 0.6, specialRule: 'none' },
+    { z: -30,  baseX: -4.0, baseY: 0.8, specialRule: 'none' },
+    { z: -36,  baseX: 4.0,  baseY: 1.0, specialRule: 'none' },
+    { z: -42,  baseX: 0.0,  baseY: 1.2, specialRule: 'none' },
+    { z: -48,  baseX: -3.5, baseY: 1.4, specialRule: 'none' },
+    { z: -54,  baseX: 4.0,  baseY: 1.6, specialRule: 'none' },
+    { z: -60,  baseX: 0.0,  baseY: 1.8, specialRule: 'none' },
+    // --- 5 TILES WITH WEIRD RULES ---
+    { z: -66,  baseX: -3.0, baseY: 2.0, specialRule: 'bounce' },   // Rule 1: Bounce Trampoline
+    { z: -72,  baseX: 3.0,  baseY: 2.2, specialRule: 'speed' },    // Rule 2: Hyper Speed Slick
+    { z: -78,  baseX: 0.0,  baseY: 2.4, specialRule: 'crumble' },  // Rule 3: Shrinking Floor
+    { z: -84,  baseX: -3.5, baseY: 2.6, specialRule: 'teleport' }, // Rule 4: Quantum Warp
+    { z: -90,  baseX: 3.5,  baseY: 2.8, specialRule: 'invert' }    // Rule 5: Controls Inverter
+  ];
+
+  for(let i=0; i<platformSlotConfigs.length; i++){
+    const cfg = platformSlotConfigs[i];
+    let colorIdx = i % 3;
+    if(cfg.specialRule === 'bounce') colorIdx = 3;
+    if(cfg.specialRule === 'speed') colorIdx = 4;
+    if(cfg.specialRule === 'crumble') colorIdx = 5;
+    if(cfg.specialRule === 'teleport') colorIdx = 6;
+    if(cfg.specialRule === 'invert') colorIdx = 7;
+
+    addPlatform(cfg.baseX, cfg.baseY, cfg.z, 6.5, 0.8, 4.5, colorIdx, false, cfg.specialRule);
+  }
+
+  // Goal Platform
+  const goalPlatform = addPlatform(0, 3.2, -98, 12, 1, 9, -1, true);
+
+  // --- END DOOR OBJECT ---
+  let doorGroup = null;
+  function buildGoalDoor(){
+    doorGroup = new THREE.Group();
+    
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1a2638, roughness: 0.3, metalness: 0.8 });
+    const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 0.4), frameMat);
+    leftPost.position.set(-1.8, 2.25, 0);
+    
+    const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 0.4), frameMat);
+    rightPost.position.set(1.8, 2.25, 0);
+    
+    const topPost = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.3, 0.4), frameMat);
+    topPost.position.set(0, 4.35, 0);
+    
+    const portalMat = new THREE.MeshStandardMaterial({
+      color: 0x0088ff,
+      emissive: 0x0066ff,
+      emissiveIntensity: 0.8,
+      roughness: 0.2
+    });
+    const portalMesh = new THREE.Mesh(new THREE.BoxGeometry(3.3, 4.2, 0.15), portalMat);
+    portalMesh.position.set(0, 2.1, 0);
+
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xffb700, metalness: 0.9, roughness: 0.1 });
+    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), handleMat);
+    handle.position.set(1.2, 2.0, 0.12);
+
+    const doorLight = new THREE.PointLight(0x0088ff, 3.0, 12);
+    doorLight.position.set(0, 2.2, 0.6);
+
+    doorGroup.add(leftPost, rightPost, topPost, portalMesh, handle, doorLight);
+    doorGroup.position.set(0, 3.7, -98);
+    scene.add(doorGroup);
+  }
+  buildGoalDoor();
+
+  // --- COLLECTIBLE ITEMS SYSTEM ---
+  const collectibles = [];
+
+  function createCollegeItemMesh(type){
+    const itemGroup = new THREE.Group();
+    if(type === 0){
+      const badge = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.7, 0.05),
+        new THREE.MeshStandardMaterial({ color: 0x0088ff, emissive: 0x0044aa, emissiveIntensity: 0.5 })
+      );
+      const strap = new THREE.Mesh(
+        new THREE.TorusGeometry(0.35, 0.02, 8, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffb700 })
+      );
+      strap.position.y = 0.45;
+      itemGroup.add(badge, strap);
+    } else if(type === 1){
+      const book = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.8, 0.1),
+        new THREE.MeshStandardMaterial({ color: 0x0033cc, emissive: 0x001166, emissiveIntensity: 0.6 })
+      );
+      itemGroup.add(book);
+    } else {
+      const cup = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.25, 0.18, 0.6, 12),
+        new THREE.MeshStandardMaterial({ color: 0xcc1111, emissive: 0x660000, emissiveIntensity: 0.4 })
+      );
+      const lid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.27, 0.27, 0.08, 12),
+        new THREE.MeshStandardMaterial({ color: 0xffffff })
+      );
+      lid.position.y = 0.32;
+      itemGroup.add(cup, lid);
+    }
+
+    const itemLight = new THREE.PointLight(0xffb700, 1.2, 6);
+    itemLight.position.set(0, 0.5, 0);
+    itemGroup.add(itemLight);
+
+    return itemGroup;
+  }
+
+  function spawnCollectibles(){
+    for(const c of collectibles){
+      scene.remove(c.mesh);
+    }
+    collectibles.length = 0;
+    collectedCount = 0;
+    collectiblesHudEl.textContent = `CAMPUS ITEMS: 0 / ${TOTAL_ITEMS}`;
+
+    const availableSlots = [];
+    for(let i=1; i<=15; i++) availableSlots.push(i);
+    availableSlots.sort(() => Math.random() - 0.5);
+
+    for(let i=0; i<TOTAL_ITEMS; i++){
+      const platIdx = availableSlots[i];
+      const plat = platforms[platIdx];
+      const type = i % 3;
+      const mesh = createCollegeItemMesh(type);
+
+      mesh.position.set(plat.x, plat.y + 1.2, plat.z);
+      scene.add(mesh);
+
+      collectibles.push({
+        mesh, platIdx, type, collected: false,
+        baseY: plat.y + 1.2
+      });
+    }
+  }
+
+  function updateCollectibles(dt, nowSec){
+    for(const c of collectibles){
+      if(c.collected) continue;
+
+      const parentPlat = platforms[c.platIdx];
+      c.mesh.position.x = parentPlat.x;
+      c.mesh.position.z = parentPlat.z;
+      c.mesh.position.y = parentPlat.y + 1.2 + Math.sin(nowSec * 3 + c.platIdx) * 0.15;
+      c.mesh.rotation.y += 1.8 * dt;
+
+      const dx = player.x - c.mesh.position.x;
+      const dy = player.y - c.mesh.position.y;
+      const dz = player.z - c.mesh.position.z;
+      const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+      if(dist < 1.8){
+        c.collected = true;
+        scene.remove(c.mesh);
+        collectedCount++;
+        collectiblesHudEl.textContent = `CAMPUS ITEMS: ${collectedCount} / ${TOTAL_ITEMS}`;
+        playItemChime();
+        levelTime = Math.max(0, levelTime - 18);
+      }
+    }
+  }
+
+  // --- MAP SHIFT & RANDOMIZATION ---
+  function triggerMapShift(){
+    playShiftSound();
+    
+    flashEl.style.opacity = '0.7';
+    setTimeout(() => flashEl.style.opacity = '0', 250);
+
+    shiftAlertEl.textContent = "⚠️ SJT FFCS TIMETABLE SHIFT DETECTED! MAP ALTERING! ⚠️";
+    shiftAlertEl.style.opacity = '1';
+    setTimeout(() => shiftAlertEl.style.opacity = '0', 2200);
+
+    for(let i = 1; i <= 15; i++){
+      const p = platforms[i];
+      const slot = platformSlotConfigs[i - 1];
+      const oldX = p.x;
+      const oldY = p.y;
+
+      p.origW = 6.0 + Math.random() * 2.0;
+      p.origD = 4.0 + Math.random() * 1.5;
+      p.mesh.geometry.dispose();
+      p.mesh.geometry = new THREE.BoxGeometry(p.origW, p.h, p.origD);
+
+      p.rotation = (Math.random() - 0.5) * 0.4;
+      p.mesh.rotation.y = p.rotation;
+
+      p.baseX = slot.baseX + (Math.random() - 0.5) * 3.5;
+      p.baseY = slot.baseY + (Math.random() - 0.5) * 0.4;
+      p.x = p.baseX;
+      p.y = p.baseY;
+      p.mesh.position.set(p.x, p.y, p.z);
+
+      if(player.standingOn === p){
+        player.x += (p.x - oldX);
+        player.y += (p.y - oldY);
+      }
+
+      if(p.specialRule === 'none') {
+        p.colorIdx = (i === 1) ? 0 : Math.floor(Math.random() * 3);
+      }
+      p.mats = createPlatMaterials(COLOR_PALETTE[p.colorIdx].hex);
+      p.mesh.material = p.isActive ? p.mats.active : p.mats.inactive;
+    }
+  }
+
+  function randomizePlatformOrientations(){
+    const moveTypes = ['none', 'horizontal', 'vertical', 'alternatingRotate'];
+
+    for(let i = 1; i <= 15; i++){
+      const p = platforms[i];
+
+      p.origW = 6.0 + Math.random() * 2.0;
+      p.origD = 4.0 + Math.random() * 1.5;
+      p.mesh.geometry.dispose();
+      p.mesh.geometry = new THREE.BoxGeometry(p.origW, p.h, p.origD);
+
+      p.rotation = (Math.random() - 0.5) * 0.5;
+      p.mesh.rotation.y = p.rotation;
+
+      if(p.specialRule === 'none'){
+        p.colorIdx = (i === 1) ? 0 : Math.floor(Math.random() * 3);
+      }
+      p.mats = createPlatMaterials(COLOR_PALETTE[p.colorIdx].hex);
+
+      const slot = platformSlotConfigs[i - 1];
+      p.baseX = slot.baseX + (Math.random() - 0.5) * 3.5;
+      p.baseY = slot.baseY + (Math.random() - 0.5) * 0.3;
+      p.x = p.baseX; p.y = p.baseY;
+      p.mesh.position.set(p.x, p.y, p.z);
+
+      p.isActive = false;
+      p.mesh.material = p.mats.inactive;
+      p.crumbleHealth = 1.0;
+      p.mesh.scale.set(1, 1, 1);
+
+      if(i % 3 === 0){
+        p.moveType = 'alternatingRotate';
+      } else {
+        p.moveType = moveTypes[Math.floor(Math.random() * moveTypes.length)];
+      }
+
+      p.moveSpeed = 0.6 + Math.random() * 0.8;
+      p.moveRange = 1.0 + Math.random() * 1.2;
+    }
+
+    spawnCollectibles();
+  }
+
+  // --- PLAYER STATE ---
+  const player = {
+    x: 0, y: 1.6, z: 2,
+    vx: 0, vy: 0, vz: 0,
+    w: 0.6, h: 1.6, d: 0.6,
+    onGround: false, standingOn: null
+  };
+
+  let lastX = player.x, lastZ = player.z;
+
+  const keys = { forward: false, backward: false, left: false, right: false, jump: false };
+
+  // --- EVENT LISTENERS ---
+  addEventListener('keydown', e => {
+    if(e.code === 'Space') e.preventDefault();
+    if(e.code === 'KeyW' || e.code === 'ArrowUp') keys.forward = true;
+    if(e.code === 'KeyS' || e.code === 'ArrowDown') keys.backward = true;
+    if(e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+    if(e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+    if(e.code === 'Space') { 
+      if(!keys.jump && player.onGround) {
+        player.vy = 10.0;
+        player.onGround = false;
+      } 
+      keys.jump = true; 
+    }
+  });
+
+  addEventListener('keyup', e => {
+    if(e.code === 'Space') { 
+      e.preventDefault(); 
+      keys.jump = false;
+    }
+    if(e.code === 'KeyW' || e.code === 'ArrowUp') keys.forward = false;
+    if(e.code === 'KeyS' || e.code === 'ArrowDown') keys.backward = false;
+    if(e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+    if(e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+  });
+
+  function showRuleAlert(msg){
+    ruleAlertEl.textContent = msg;
+    ruleAlertEl.style.opacity = '1';
+    setTimeout(() => ruleAlertEl.style.opacity = '0', 1800);
+  }
+
+  function resetPlayer(reason){
+    if(state === 'lose') return;
+    state = 'lose';
+    document.exitPointerLock();
+
+    deaths++;
+    deathsEl.textContent = deaths + ' BACKLOGS';
+    
+    stopAllAudio();
+
+    const scaryTextEl = document.getElementById('scaryText');
+    if(reason === 'ghost'){
+      scaryTextEl.textContent = "THE GHOST WARDEN CONSUMED YOU AFTER 15 SECONDS OF INACTIVITY. SJT AT NIGHT NEVER FORGIVES IDLE SOULS.";
+    } else {
+      scaryTextEl.textContent = "YOU FELL INTO THE SJT VOID. NO REGISTERED FLOOR REMAINS.";
+    }
+
+    document.getElementById('loseScreen').classList.remove('hidden');
+  }
+
+  function updatePlatforms(now, dt){
+    const timeSec = now * 0.001;
+    for(const p of platforms){
+      p.dx = 0; p.dy = 0; p.dRot = 0;
+
+      // Handle Crumble Tile Recovery
+      if(p.specialRule === 'crumble' && player.standingOn !== p){
+        if(p.crumbleHealth < 1.0){
+          p.crumbleHealth = Math.min(1.0, p.crumbleHealth + dt * 0.8);
+          p.mesh.scale.set(p.crumbleHealth, 1, p.crumbleHealth);
+        }
+      }
+
+      if(p.moveType === 'horizontal'){
+        const oldX = p.x;
+        p.x = p.baseX + Math.sin(timeSec * p.moveSpeed) * p.moveRange;
+        p.dx = p.x - oldX;
+        p.mesh.position.x = p.x;
+      } else if(p.moveType === 'vertical'){
+        const oldY = p.y;
+        p.y = p.baseY + Math.sin(timeSec * p.moveSpeed) * p.moveRange;
+        p.dy = p.y - oldY;
+        p.mesh.position.y = p.y;
+      } else if(p.moveType === 'alternatingRotate'){
+        const cycle = Math.floor(timeSec / 6) % 2;
+        if(cycle === 0){
+          p.dRot = 1.4 * dt;
+          p.rotation += p.dRot;
+          p.mesh.rotation.y = p.rotation;
+        }
+      }
+    }
+  }
+
+  function checkCollision(dt){
+    if(player.standingOn && player.onGround){
+      if(player.standingOn.isActive){
+        const p = player.standingOn;
+        player.x += p.dx;
+        player.y += p.dy;
+
+        // --- WEIRD RULE MECHANICS ---
+        if(p.specialRule === 'bounce'){
+          player.vy = 19.0; // Mega Trampoline Launch
+          player.onGround = false;
+          blip(700, 0.25, 'sine', 0.3);
+          showRuleAlert("⚡ RULE 1: NEON TRAMPOLINE LAUNCHED YOU!");
+        } else if(p.specialRule === 'crumble'){
+          p.crumbleHealth -= dt * 1.6;
+          p.mesh.scale.set(Math.max(0.01, p.crumbleHealth), 1, Math.max(0.01, p.crumbleHealth));
+          if(p.crumbleHealth <= 0.1){
+            p.isActive = false;
+            player.standingOn = null;
+            showRuleAlert("⚡ RULE 3: CRUMBLING TILE COLLAPSED!");
+          }
+        } else if(p.specialRule === 'teleport'){
+          player.z -= 6.5; // Teleport forward safely
+          flashEl.style.opacity = '0.9';
+          setTimeout(() => flashEl.style.opacity = '0', 150);
+          blip(900, 0.3, 'sawtooth', 0.3);
+          showRuleAlert("⚡ RULE 4: QUANTUM WARP DISPLACED YOU!");
+        } else if(p.specialRule === 'invert'){
+          if(invertTimer <= 0){
+            invertTimer = 2.5;
+            showRuleAlert("⚡ RULE 5: REALITY INVERTED (WASD REVERSED)!");
+            blip(120, 0.4, 'sawtooth', 0.4);
+          }
+        }
+      } else {
+        player.standingOn = null;
+      }
+    }
+
+    player.vy -= 18 * dt;
+
+    let moveSpeed = 8.5;
+
+    // Rule 2: Hyper Speed Boost
+    if(player.standingOn && player.standingOn.specialRule === 'speed'){
+      moveSpeed = 19.0;
+      if(Math.random() < 0.2) showRuleAlert("⚡ RULE 2: HYPER SPEED SLICK ACTIVATED!");
+    }
+
+    let forward = 0, strafe = 0;
+
+    if(keys.forward) forward += 1;
+    if(keys.backward) forward -= 1;
+    if(keys.left) strafe -= 1;
+    if(keys.right) strafe += 1;
+
+    // Apply Inverted Controls Rule
+    if(invertTimer > 0){
+      forward = -forward;
+      strafe = -strafe;
+      invertTimer -= dt;
+    }
+
+    if(forward !== 0 && strafe !== 0){
+      forward *= 0.7071; strafe *= 0.7071;
+    }
+
+    const sin = Math.sin(yaw), cos = Math.cos(yaw);
+    player.vx = (strafe * cos - forward * sin) * moveSpeed;
+    player.vz = (-strafe * sin - forward * cos) * moveSpeed;
+
+    let nx = player.x + player.vx * dt;
+    let ny = player.y + player.vy * dt;
+    let nz = player.z + player.vz * dt;
+
+    player.onGround = false; 
+    player.standingOn = null;
+
+    const feetOld = player.y - 1.2;
+    const feetNew = ny - 1.2;
+
+    for(const p of platforms){
+      if(!p.isActive) continue;
+
+      const dx = nx - p.x;
+      const dz = nz - p.z;
+      const cosR = Math.cos(-p.rotation);
+      const sinR = Math.sin(-p.rotation);
+      const localX = dx * cosR - dz * sinR;
+      const localZ = dx * sinR + dz * cosR;
+
+      const scaledW = p.origW * (p.mesh.scale.x || 1.0);
+      const scaledD = p.origD * (p.mesh.scale.z || 1.0);
+
+      const halfW = scaledW / 2 + player.w / 2;
+      const halfD = scaledD / 2 + player.d / 2;
+
+      if(Math.abs(localX) < halfW && Math.abs(localZ) < halfD){
+        const platTop = p.y + p.h / 2;
+        
+        if(player.vy <= 0 && feetOld >= platTop - 0.45 && feetNew <= platTop + 0.25){
+          ny = platTop + 1.2;
+          player.vy = 0;
+          player.onGround = true;
+          player.standingOn = p;
+        }
+      }
+    }
+
+    player.x = nx; player.y = ny; player.z = nz;
+
+    if(player.y < -12) resetPlayer('void');
+
+    // Goal Trigger
+    const doorDist = Math.sqrt(
+      Math.pow(player.x - doorGroup.position.x, 2) +
+      Math.pow(player.z - doorGroup.position.z, 2)
+    );
+
+    if(doorDist < 2.2 && player.y >= 3.0){
+      if(collectedCount >= TOTAL_ITEMS){
+        state = 'win';
+        document.exitPointerLock();
+        stopAllAudio();
+        
+        document.getElementById('winStats').textContent = `ITEMS COLLECTED: ${collectedCount} / ${TOTAL_ITEMS}`;
+        document.getElementById('winScreen').classList.remove('hidden');
+      } else {
+        shiftAlertEl.textContent = `⚠️ YOU MUST COLLECT ALL ITEMS TO RECEIVE OUTPASS! (${collectedCount}/${TOTAL_ITEMS}) ⚠️`;
+        shiftAlertEl.style.opacity = '1';
+        setTimeout(() => {
+          if (shiftAlertEl.textContent.includes('OUTPASS')) {
+            shiftAlertEl.style.opacity = '0';
+          }
+        }, 2000);
+      }
+    }
+  }
+
+  let lastTime = performance.now();
+  function animate(now){
+    const dt = Math.min(0.05, (now - lastTime)/1000);
+    lastTime = now;
+
+    if(state === 'playing'){
+      levelTime += dt;
+      mapShiftTimer += dt;
+
+      if(mapShiftTimer >= nextMapShiftTime){
+        mapShiftTimer = 0;
+        nextMapShiftTime = 20 + Math.random() * 15;
+        triggerMapShift();
+      }
+
+      const decayRatio = Math.min(1.0, levelTime / DECAY_DURATION);
+      const visionPercent = Math.max(0, Math.round((1.0 - decayRatio) * 100));
+      visionDecayEl.textContent = `ATTENDANCE: ${visionPercent}%`;
+      visionDecayEl.style.color = (visionPercent < 25) ? '#ff0000' : '#3da1a1';
+
+      // --- GHOST WARDEN 15-SECOND INACTIVITY MECHANIC ---
+      const distMoved = Math.hypot(player.x - lastX, player.z - lastZ);
+      lastX = player.x; lastZ = player.z;
+
+      if(distMoved < 0.025 && player.onGround){
+        idleTimer += dt;
+      } else {
+        idleTimer = Math.max(0, idleTimer - dt * 2.0);
+      }
+
+      if(idleTimer > 2.0){
+        ghostGroup.visible = true;
+        
+        const speedMultiplier = 1.0 + (idleTimer - 2.0) * 0.45;
+        ghostGroup.position.x += (player.x - ghostGroup.position.x) * dt * speedMultiplier;
+        ghostGroup.position.y += (player.y + 0.3 - ghostGroup.position.y) * dt * speedMultiplier;
+        ghostGroup.position.z += (player.z - ghostGroup.position.z) * dt * speedMultiplier;
+        
+        ghostGroup.lookAt(player.x, player.y + 0.5, player.z);
+
+        const timeLeft = Math.max(0, 15 - idleTimer).toFixed(1);
+        ghostAlertEl.style.opacity = '1';
+        ghostAlertEl.textContent = `⚠️ INACTIVITY DETECTED! GHOST WARDEN CLOSING IN (${timeLeft}s) ⚠️`;
+
+        if(now - lastGroanTime > 3200){
+          lastGroanTime = now;
+          playMonsterGroan();
+        }
+
+        const ghostDist = ghostGroup.position.distanceTo(new THREE.Vector3(player.x, player.y, player.z));
+        if(ghostDist < 1.3 || idleTimer >= 15.0){
+          resetPlayer('ghost');
+        }
+      } else {
+        ghostGroup.visible = false;
+        ghostGroup.position.set(player.x, player.y + 8, player.z + 8);
+        ghostAlertEl.style.opacity = '0';
+      }
+
+      // --- HOLLOW BLOCK MATERIALIZATION ---
+      vanishTimer += dt;
+      const targetPlat = platforms[targetPlatIndex];
+
+      const col = COLOR_PALETTE[targetPlat.colorIdx];
+      colorIndEl.textContent = `TARGET: ${col.name} ${targetPlat.specialRule !== 'none' ? '['+targetPlat.specialRule.toUpperCase()+']' : '(HOLLOW)'}`;
+      colorIndEl.style.color = col.css;
+      colorIndEl.style.borderColor = col.css;
+
+      if(vanishTimer >= BLINK_START && vanishTimer < SOLID_START){
+        targetPlat.mesh.visible = (Math.floor(now * 0.015) % 2 === 0);
+      } else if(vanishTimer >= SOLID_START){
+        targetPlat.isActive = true;
+        targetPlat.mesh.material = targetPlat.mats.active;
+        targetPlat.mesh.visible = true;
+
+        for(let i = 1; i <= 15; i++){
+          if(i !== targetPlatIndex){
+            platforms[i].isActive = false;
+            platforms[i].mesh.material = platforms[i].mats.inactive;
+            platforms[i].mesh.visible = true;
+          }
+        }
+
+        blip(320, 0.15, 'triangle', 0.2);
+
+        vanishTimer = 0;
+        const step = Math.random() < 0.5 ? 1 : 2;
+        targetPlatIndex = ((targetPlatIndex - 1 + step) % 15) + 1;
+
+        const nextPlat = platforms[targetPlatIndex];
+        nextPlat.isActive = false;
+        nextPlat.mesh.material = nextPlat.mats.inactive;
+      } else {
+        targetPlat.mesh.visible = true;
+        targetPlat.isActive = false;
+        targetPlat.mesh.material = targetPlat.mats.inactive;
+      }
+
+      updatePlatforms(now, dt);
+      updateCollectibles(dt, now * 0.001);
+      checkCollision(dt);
+
+      camera.position.set(player.x, player.y, player.z);
+      camera.rotation.set(pitch, yaw, 0, 'YXZ');
+      playerLight.position.set(player.x, player.y, player.z);
+    }
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+
+  function startStage(){
+    initAudio();
+    randomizePlatformOrientations();
+    document.getElementById('stageIntro').classList.remove('hidden');
+    state = 'intro';
+    setTimeout(()=>{
+      document.getElementById('stageIntro').classList.add('hidden');
+      state = 'playing';
+      levelTime = 0; mapShiftTimer = 0; idleTimer = 0; lastGroanTime = 0; invertTimer = 0;
+      player.x = 0; player.y = 1.6; player.z = 2;
+      lastX = player.x; lastZ = player.z;
+      yaw = 0; pitch = 0;
+      targetPlatIndex = 1;
+      vanishTimer = 0;
+      
+      ghostGroup.visible = false;
+      ghostGroup.position.set(0, 10, 10);
+
+      for(let i=1; i<=15; i++){
+        platforms[i].isActive = false;
+        platforms[i].mesh.material = platforms[i].mats.inactive;
+        platforms[i].mesh.visible = true;
+      }
+
+      renderer.domElement.requestPointerLock();
+    }, 2800);
+  }
+
+  document.getElementById('enterBtn').addEventListener('click', ()=>{
+    document.getElementById('menu').classList.add('hidden');
+    startStage();
+  });
+
+  document.getElementById('retryBtn').addEventListener('click', ()=>{
+    document.getElementById('loseScreen').classList.add('hidden');
+    startStage();
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    document.getElementById('winScreen').classList.add('hidden');
+    deaths = 0; deathsEl.textContent = '0 BACKLOGS';
+    startStage();
+  });
+
+  addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  randomizePlatformOrientations();
+
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
