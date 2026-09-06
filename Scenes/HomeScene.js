@@ -346,6 +346,7 @@ class HomeScene extends Phaser.Scene {
     // =========================
 
     if (text === 'START') {
+          this.sound.play('startAudio');
 
         const saveFile = localStorage.getItem('C2C_SAVE');
 
