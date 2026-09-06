@@ -239,6 +239,8 @@ class Level1Scene extends Phaser.Scene {
             Phaser.Math.DegToRad(-10)
         );
 
+        this.createBuildingGlows();
+
         this.player = this.add.rectangle(
             1020,
             700,
@@ -268,10 +270,113 @@ class Level1Scene extends Phaser.Scene {
         );
 
         this.darkness = this.add.graphics();
-this.darkness.setScrollFactor(0);
-this.darkness.setDepth(1000);
-        
+        this.darkness.setScrollFactor(0);
+        this.darkness.setDepth(1000);
+
+        this.flashlight = this.add.graphics();
+        this.flashlight.setScrollFactor(0);
+        this.flashlight.setDepth(1001);
+
+        this.facingX = 0;
+        this.facingY = -1;
+
     }
+
+createBuildingGlows() {
+
+    this.buildingGlows = [];
+
+    const glowPositions = [
+        [780, 350],
+        [900, 350],
+        [1020, 350],
+        [1140, 350],
+        [1260, 350],
+        [1380, 350],
+
+        [1240, 780],
+        [1240, 850],
+        [1240, 1000],
+        [1240, 1080],
+
+        [680, 880],
+        [760, 880],
+        [840, 880],
+        [900, 980],
+
+        [520, 1180],
+        [580, 1180],
+        [520, 1250],
+        [580, 1300],
+
+        [1900, 540],
+        [1980, 540],
+        [2070, 540],
+
+        [1900, 820],
+        [2000, 820],
+        [2090, 820],
+
+        [1000, 1400],
+        [1100, 1400],
+        [1200, 1400],
+        [1300, 1400]
+    ];
+
+    for (const [x, y] of glowPositions) {
+
+        const glow = this.add.rectangle(
+            x,
+            y,
+            12,
+            18,
+            0xffb347,
+            0
+        );
+
+        glow.setDepth(1010);
+
+        glow.setBlendMode(
+            Phaser.BlendModes.ADD
+        );
+
+        this.buildingGlows.push(glow);
+    }
+
+    this.time.addEvent({
+        delay: 700,
+        loop: true,
+        callback: () => {
+
+            const glow =
+                Phaser.Utils.Array.GetRandom(
+                    this.buildingGlows
+                );
+
+            if (glow.alpha > 0) {
+
+                this.tweens.add({
+                    targets: glow,
+                    alpha: 0,
+                    duration: Phaser.Math.Between(100, 400)
+                });
+
+            } else {
+
+                this.tweens.add({
+                    targets: glow,
+                    alpha: Phaser.Math.FloatBetween(0.5, 0.9),
+                    duration: Phaser.Math.Between(100, 300),
+                    yoyo: true,
+                    hold: Phaser.Math.Between(500, 2000)
+                });
+
+            }
+
+        }
+    });
+
+}
 
     isOnRoad(x, y) {
 
@@ -282,7 +387,8 @@ this.darkness.setDepth(1000);
             { x: x - halfWidth, y: y - halfHeight },
             { x: x + halfWidth, y: y - halfHeight },
             { x: x - halfWidth, y: y + halfHeight },
-            { x: x + halfWidth, y: y + halfHeight }
+            { x: x + halfWidth, y: y + halfHeight },
+            { x: x, y: y }
         ];
 
         for (const road of this.roads) {
@@ -290,7 +396,7 @@ this.darkness.setDepth(1000);
             const cos = Math.cos(-road.rotation);
             const sin = Math.sin(-road.rotation);
 
-            let allInside = true;
+            let insideCount = 0;
 
             for (const point of points) {
 
@@ -304,17 +410,17 @@ this.darkness.setDepth(1000);
                     dx * sin + dy * cos + road.y;
 
                 if (
-                    rotatedX < road.x - road.width / 2 ||
-                    rotatedX > road.x + road.width / 2 ||
-                    rotatedY < road.y - road.height / 2 ||
-                    rotatedY > road.y + road.height / 2
+                    rotatedX >= road.x - road.width / 2 &&
+                    rotatedX <= road.x + road.width / 2 &&
+                    rotatedY >= road.y - road.height / 2 &&
+                    rotatedY <= road.y + road.height / 2
                 ) {
-                    allInside = false;
-                    break;
+                    insideCount++;
                 }
+
             }
 
-            if (allInside) {
+            if (insideCount >= 3) {
                 return true;
             }
         }
@@ -324,7 +430,7 @@ this.darkness.setDepth(1000);
 
     update() {
 
-        const speed = 75;
+        const speed = 300;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -408,21 +514,96 @@ this.darkness.setDepth(1000);
 
         this.darkness.clear();
 
-const playerX =
-    this.player.x - this.cameras.main.scrollX;
+        const playerX =
+            this.player.x - this.cameras.main.scrollX;
 
-const playerY =
-    this.player.y - this.cameras.main.scrollY;
+        const playerY =
+            this.player.y - this.cameras.main.scrollY;
 
-this.darkness.fillStyle(0x000000, 0.80);
+        this.darkness.fillStyle(
+            0x000000,
+            0.90
+        );
 
-this.darkness.fillRect(
-    0,
-    0,
-    this.scale.width,
-    this.scale.height
-);
+        this.darkness.fillRect(
+            0,
+            0,
+            this.scale.width,
+            this.scale.height
+        );
 
+        if (velocityX !== 0 || velocityY !== 0) {
+
+            this.facingX = velocityX;
+            this.facingY = velocityY;
+
+            const length = Math.sqrt(
+                this.facingX * this.facingX +
+                this.facingY * this.facingY
+            );
+
+            this.facingX /= length;
+            this.facingY /= length;
+        }
+
+        this.flashlight.clear();
+
+        const flashlightLength = 280;
+        const flashlightWidth = 70;
+
+        const endX =
+            playerX +
+            this.facingX * flashlightLength;
+
+        const endY =
+            playerY +
+            this.facingY * flashlightLength;
+
+        const perpendicularX = -this.facingY;
+        const perpendicularY = this.facingX;
+
+        const leftX =
+            endX +
+            perpendicularX * flashlightWidth;
+
+        const leftY =
+            endY +
+            perpendicularY * flashlightWidth;
+
+        const rightX =
+            endX -
+            perpendicularX * flashlightWidth;
+
+        const rightY =
+            endY -
+            perpendicularY * flashlightWidth;
+
+        this.flashlight.fillStyle(
+            0xffffcc,
+            0.20
+        );
+
+        this.flashlight.beginPath();
+
+        this.flashlight.moveTo(
+            playerX,
+            playerY
+        );
+
+        this.flashlight.lineTo(
+            leftX,
+            leftY
+        );
+
+        this.flashlight.lineTo(
+            rightX,
+            rightY
+        );
+
+        this.flashlight.closePath();
+
+        this.flashlight.fillPath();
 
     }
+
 }
