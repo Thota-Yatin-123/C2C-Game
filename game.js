@@ -15,12 +15,13 @@ const config = {
         }
     },
 
-    scene: [
-        HomeScene,
-        Level1Scene,
-        SubwayTunnel1,
-        Level2Scene
-    ]
+ scene: [
+    HomeScene,
+    Level1Scene,
+    SubwayTunnel1,
+    Level2Scene,
+    Level3Scene
+]
 };
 
 const game = new Phaser.Game(config);

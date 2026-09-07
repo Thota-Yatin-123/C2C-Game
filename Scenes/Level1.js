@@ -4,43 +4,43 @@ class Level1Scene extends Phaser.Scene {
         super('Level1Scene');
     }
 
-create() {
+    create() {
 
-    this.sound.pauseOnBlur = false;
+        this.sound.pauseOnBlur = false;
 
-    /*
-     * =================================
-     * LEVEL 1 MUSIC
-     * =================================
-     */
+        /*
+         * =================================
+         * LEVEL 1 MUSIC
+         * =================================
+         */
 
-    const gameMusic = this.sound.get('gameMusic');
+        const gameMusic = this.sound.get('gameMusic');
 
-    if (gameMusic) {
+        if (gameMusic) {
 
-        if (!gameMusic.isPlaying) {
+            if (!gameMusic.isPlaying) {
 
-            gameMusic.play({
-                loop: true,
-                volume: 0.5
-            });
+                gameMusic.play({
+                    loop: true,
+                    volume: 0.5
+                });
+
+            }
+
+        } else {
+
+            this.sound.play(
+                'gameMusic',
+                {
+                    loop: true,
+                    volume: 0.5
+                }
+            );
 
         }
 
-    } else {
-
-        this.sound.play(
-            'gameMusic',
-            {
-                loop: true,
-                volume: 0.5
-            }
-        );
-
-    }
-
-    const worldWidth = 2000;
-    const worldHeight = 1400;
+        const worldWidth = 2000;
+        const worldHeight = 1400;
 
         this.physics.world.setBounds(
             0,
@@ -527,7 +527,116 @@ create() {
             });
 
 
+            if (x === 1250 && y === 570) {
+
+                /*
+                 * =================================
+                 * EYES BEHIND THE LIGHT
+                 * =================================
+                 */
+
+                const eyes = this.add.graphics();
+
+                this.eyeX = x;
+                this.eyeY = y - 55;
+                this.eyes = eyes;
+
+                /*
+                 * Store the exact lamp that
+                 * controls these eyes.
+                 */
+
+                this.lampForEyes = lamp;
+
+                eyes.setDepth(1011);
+
+                /*
+                 * Left eye
+                 */
+
+                eyes.fillStyle(
+                    0xffffff,
+                    1
+                );
+
+                eyes.fillCircle(
+                    x - 12,
+                    y - 55,
+                    4
+                );
+
+                /*
+                 * Right eye
+                 */
+
+                eyes.fillCircle(
+                    x + 12,
+                    y - 55,
+                    4
+                );
+
+                /*
+                 * Keep eyes hidden while light is ON
+                 */
+
+                eyes.setVisible(false);
+
+
+                /*
+                 * =================================
+                 * LIGHT / EYES TOGGLE
+                 * =================================
+                 */
+
+                this.time.addEvent({
+
+                    delay: 10000,
+
+                    loop: true,
+
+                    callback: () => {
+
+                        const isOn =
+                            lamp.visible &&
+                            lamp.alpha > 0;
+
+                        /*
+                         * Turn light OFF
+                         */
+
+                        if (isOn) {
+
+                            lamp.setAlpha(0);
+
+                            glow.setAlpha(0);
+
+                            eyes.setVisible(true);
+
+                        }
+
+                        /*
+                         * Turn light ON
+                         */
+
+                        else {
+
+                            lamp.setAlpha(1);
+
+                            glow.setAlpha(0.75);
+
+                            eyes.setVisible(false);
+
+                        }
+
+                    }
+
+                });
+
+            }
+
         }
+
+
         /*
          * =================================
          * TRASH CANS
@@ -747,170 +856,167 @@ create() {
             true
         );
 
+
         /*
- * =================================
- * RETURN FROM SUBWAY
- * =================================
- */
+         * =================================
+         * RETURN FROM SUBWAY
+         * =================================
+         */
 
-const returnFromSubway =
-    localStorage.getItem(
-        'C2C_RETURN_FROM_SUBWAY'
-    );
+        const returnFromSubway =
+            localStorage.getItem(
+                'C2C_RETURN_FROM_SUBWAY'
+            );
 
-if (
-    returnFromSubway === 'true'
-) {
+        if (
+            returnFromSubway === 'true'
+        ) {
 
-    const saveFile =
-        localStorage.getItem(
-            'C2C_SAVE'
-        );
-
-    if (saveFile) {
-
-        try {
-
-            const saveData =
-                JSON.parse(
-                    saveFile
+            const saveFile =
+                localStorage.getItem(
+                    'C2C_SAVE'
                 );
 
-            if (
-                saveData.level1 &&
-                typeof saveData.level1.x === 'number' &&
-                typeof saveData.level1.y === 'number'
-            ) {
+            if (saveFile) {
 
-                this.player.setPosition(
-                    saveData.level1.x,
-                    saveData.level1.y
+                try {
+
+                    const saveData =
+                        JSON.parse(
+                            saveFile
+                        );
+
+                    if (
+                        saveData.level1 &&
+                        typeof saveData.level1.x === 'number' &&
+                        typeof saveData.level1.y === 'number'
+                    ) {
+
+                        this.player.setPosition(
+                            saveData.level1.x,
+                            saveData.level1.y
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.log(
+                        'Level 1 return error:',
+                        error
+                    );
+
+                }
+
+            }
+
+            localStorage.removeItem(
+                'C2C_RETURN_FROM_SUBWAY'
+            );
+
+        }
+
+
+        /*
+         * =================================
+         * LOAD SAVE
+         * =================================
+         */
+
+        const loadGame =
+            localStorage.getItem(
+                'C2C_LOAD_GAME'
+            );
+
+        const saveFile =
+            localStorage.getItem(
+                'C2C_SAVE'
+            );
+
+        if (
+            loadGame === 'true' &&
+            saveFile
+        ) {
+
+            try {
+
+                const saveData =
+                    JSON.parse(saveFile);
+
+                if (
+                    saveData.level1 &&
+                    typeof saveData.level1.x === 'number' &&
+                    typeof saveData.level1.y === 'number'
+                ) {
+
+                    this.player.setPosition(
+                        saveData.level1.x,
+                        saveData.level1.y
+                    );
+
+                }
+
+                this.subwayUnlocked =
+                    (
+                        saveData.completedKeys &&
+                        saveData.completedKeys.length >= 3
+                    ) ||
+                    saveData.subwayUnlocked ||
+                    false;
+
+            } catch (error) {
+
+                console.log(
+                    'Save load error:',
+                    error
                 );
 
             }
 
-        } catch (error) {
-
-            console.log(
-                'Level 1 return error:',
-                error
+            localStorage.removeItem(
+                'C2C_LOAD_GAME'
             );
 
         }
 
-    }
 
-    localStorage.removeItem(
-        'C2C_RETURN_FROM_SUBWAY'
-    );
+        /*
+         * =================================
+         * LOAD GLOBAL NAUSEA STATE
+         * =================================
+         */
 
-}
+        this.nauseaActivated = false;
 
-/*
- * =================================
- * LOAD SAVE
- * =================================
- */
-
-const loadGame =
-    localStorage.getItem(
-        'C2C_LOAD_GAME'
-    );
-
-const saveFile =
-    localStorage.getItem(
-        'C2C_SAVE'
-    );
-
-if (
-    loadGame === 'true' &&
-    saveFile
-) {
-
-    try {
-
-        const saveData =
-            JSON.parse(saveFile);
-
-        if (
-            saveData.level1 &&
-            typeof saveData.level1.x === 'number' &&
-            typeof saveData.level1.y === 'number'
-        ) {
-
-            this.player.setPosition(
-                saveData.level1.x,
-                saveData.level1.y
+        const currentSave =
+            localStorage.getItem(
+                'C2C_SAVE'
             );
+
+        if (currentSave) {
+
+            try {
+
+                const saveData =
+                    JSON.parse(
+                        currentSave
+                    );
+
+                this.nauseaActivated =
+                    saveData.nauseaActivated === true;
+
+            } catch (error) {
+
+                console.log(
+                    'Nausea state load error:',
+                    error
+                );
+
+            }
 
         }
 
-        this.subwayUnlocked =
-            (
-                saveData.completedKeys &&
-                saveData.completedKeys.length >= 3
-            ) ||
-            saveData.subwayUnlocked ||
-            false;
 
-    } catch (error) {
-
-        console.log(
-            'Save load error:',
-            error
-        );
-
-    }
-
-    localStorage.removeItem(
-        'C2C_LOAD_GAME'
-    );
-
-}
-
-
-/*
- * =================================
- * LOAD GLOBAL NAUSEA STATE
- * =================================
- */
-
-this.nauseaActivated = false;
-
-const currentSave =
-    localStorage.getItem(
-        'C2C_SAVE'
-    );
-
-if (currentSave) {
-
-    try {
-
-        const saveData =
-            JSON.parse(
-                currentSave
-            );
-
-        this.nauseaActivated =
-            saveData.nauseaActivated === true;
-
-    } catch (error) {
-
-        console.log(
-            'Nausea state load error:',
-            error
-        );
-
-    }
-
-}
-
-
-/*
- * =================================
- * MOVEMENT KEYS
- * =================================
- */
         /*
          * =================================
          * MOVEMENT KEYS
@@ -976,135 +1082,131 @@ if (currentSave) {
         this.darkness.setDepth(1000);
 
 
+        /*
+         * =================================
+         * FLASHLIGHT
+         * =================================
+         */
 
-/*
- * =================================
- * FLASHLIGHT
- * =================================
- */
+        this.flashlight =
+            this.add.graphics();
 
-this.flashlight =
-    this.add.graphics();
+        this.flashlight.setScrollFactor(0);
 
-this.flashlight.setScrollFactor(0);
-
-this.flashlight.setDepth(1001);
-
-
-/*
- * =================================
- * FLASHLIGHT RADIAL GLOW TEXTURE
- * =================================
- */
-
-const torchCanvas =
-    document.createElement('canvas');
-
-torchCanvas.width = 256;
-torchCanvas.height = 256;
-
-const torchContext =
-    torchCanvas.getContext('2d');
-
-const torchGradient =
-    torchContext.createRadialGradient(
-        128,
-        128,
-        0,
-        128,
-        128,
-        128
-    );
-
-torchGradient.addColorStop(
-    0,
-    'rgba(255, 255, 220, 0.90)'
-);
-
-torchGradient.addColorStop(
-    0.12,
-    'rgba(255, 255, 210, 0.65)'
-);
-
-torchGradient.addColorStop(
-    0.30,
-    'rgba(255, 250, 190, 0.35)'
-);
-
-torchGradient.addColorStop(
-    0.50,
-    'rgba(255, 240, 160, 0.16)'
-);
-
-torchGradient.addColorStop(
-    0.70,
-    'rgba(255, 230, 130, 0.06)'
-);
-
-torchGradient.addColorStop(
-    1,
-    'rgba(255, 220, 100, 0)'
-);
-
-torchContext.fillStyle =
-    torchGradient;
-
-torchContext.fillRect(
-    0,
-    0,
-    256,
-    256
-);
+        this.flashlight.setDepth(1001);
 
 
-if (
-    !this.textures.exists(
-        'torchGlow'
-    )
-) {
+        /*
+         * =================================
+         * FLASHLIGHT RADIAL GLOW TEXTURE
+         * =================================
+         */
 
-    this.textures.addCanvas(
-        'torchGlow',
-        torchCanvas
-    );
+        const torchCanvas =
+            document.createElement('canvas');
 
-}
+        torchCanvas.width = 256;
+        torchCanvas.height = 256;
+
+        const torchContext =
+            torchCanvas.getContext('2d');
+
+        const torchGradient =
+            torchContext.createRadialGradient(
+                128,
+                128,
+                0,
+                128,
+                128,
+                128
+            );
+
+        torchGradient.addColorStop(
+            0,
+            'rgba(255, 255, 220, 0.90)'
+        );
+
+        torchGradient.addColorStop(
+            0.12,
+            'rgba(255, 255, 210, 0.65)'
+        );
+
+        torchGradient.addColorStop(
+            0.30,
+            'rgba(255, 250, 190, 0.35)'
+        );
+
+        torchGradient.addColorStop(
+            0.50,
+            'rgba(255, 240, 160, 0.16)'
+        );
+
+        torchGradient.addColorStop(
+            0.70,
+            'rgba(255, 230, 130, 0.06)'
+        );
+
+        torchGradient.addColorStop(
+            1,
+            'rgba(255, 220, 100, 0)'
+        );
+
+        torchContext.fillStyle =
+            torchGradient;
+
+        torchContext.fillRect(
+            0,
+            0,
+            256,
+            256
+        );
 
 
-/*
- * Actual soft glow
- */
+        if (
+            !this.textures.exists(
+                'torchGlow'
+            )
+        ) {
 
-this.torchGlow =
-    this.add.image(
-        0,
-        0,
-        'torchGlow'
-    );
+            this.textures.addCanvas(
+                'torchGlow',
+                torchCanvas
+            );
 
-this.torchGlow.setScrollFactor(0);
-
-this.torchGlow.setDepth(1001);
-
-this.torchGlow.setDisplaySize(
-    180,
-    180
-);
-
-this.torchGlow.setBlendMode(
-    Phaser.BlendModes.ADD
-);
-
-this.torchGlow.setAlpha(
-    0.65
-);
+        }
 
 
-this.facingX = 0;
-this.facingY = -1;
+        /*
+         * Actual soft glow
+         */
+
+        this.torchGlow =
+            this.add.image(
+                0,
+                0,
+                'torchGlow'
+            );
+
+        this.torchGlow.setScrollFactor(0);
+
+        this.torchGlow.setDepth(1001);
+
+        this.torchGlow.setDisplaySize(
+            180,
+            180
+        );
+
+        this.torchGlow.setBlendMode(
+            Phaser.BlendModes.ADD
+        );
+
+        this.torchGlow.setAlpha(
+            0.65
+        );
 
 
-
+        this.facingX = 0;
+        this.facingY = -1;
 
 
         /*
@@ -1285,16 +1387,16 @@ this.facingY = -1;
              */
 
             if (
-    event.data &&
-    event.data.type ===
-    'SAMOLE_KEYS_COLLECTED'
-) {
+                event.data &&
+                event.data.type ===
+                'SAMOLE_KEYS_COLLECTED'
+            ) {
 
-    this.subwayUnlocked = true;
+                this.subwayUnlocked = true;
 
-    return;
+                return;
 
-}
+            }
 
 
             /*
@@ -1648,108 +1750,111 @@ this.facingY = -1;
     update() {
 
         /*
- * =================================
- * AUTO SAVE POSITION
- * =================================
- */
+         * =================================
+         * AUTO SAVE POSITION
+         * =================================
+         */
 
-this.saveTimer =
-    (this.saveTimer || 0) +
-    this.game.loop.delta;
+        this.saveTimer =
+            (this.saveTimer || 0) +
+            this.game.loop.delta;
 
-if (
-    this.saveTimer >= 1000
-) {
+        if (
+            this.saveTimer >= 1000
+        ) {
 
-    this.saveTimer = 0;
+            this.saveTimer = 0;
 
-    const existingSave =
-        localStorage.getItem(
-            'C2C_SAVE'
-        );
+            const existingSave =
+                localStorage.getItem(
+                    'C2C_SAVE'
+                );
 
-    let saveData = {
+            let saveData = {
 
-        version: 1,
+                version: 1,
 
-        scene: 'Level1Scene',
+                scene: 'Level1Scene',
 
-        completedKeys: [],
+                completedKeys: [],
 
-        level1: {
-            x: this.player.x,
-            y: this.player.y
-        },
+                level1: {
+                    x: this.player.x,
+                    y: this.player.y
+                },
 
-        samole: null,
+                samole: null,
 
-       subwayUnlocked:
-    this.subwayUnlocked || false,
+                subwayUnlocked:
+                    this.subwayUnlocked || false,
 
-nauseaActivated:
-    this.nauseaActivated || false,
+                nauseaActivated:
+                    this.nauseaActivated || false,
 
-updatedAt:
-    Date.now()
+                updatedAt:
+                    Date.now()
 
-    };
+            };
 
 
-    if (existingSave) {
+            if (existingSave) {
 
-        try {
+                try {
 
-            const oldSave =
-                JSON.parse(existingSave);
+                    const oldSave =
+                        JSON.parse(existingSave);
 
-            saveData =
-                {
-                    ...saveData,
-                    ...oldSave,
+                    saveData =
+                        {
+                            ...saveData,
+                            ...oldSave,
 
-                    scene:
-                        'Level1Scene',
+                            scene:
+                                'Level1Scene',
 
-                    level1: {
-                        x: this.player.x,
-                        y: this.player.y
-                    },
+                            level1: {
+                                x: this.player.x,
+                                y: this.player.y
+                            },
 
-                   subwayUnlocked:
-    this.subwayUnlocked ||
-    oldSave.subwayUnlocked ||
-    false,
+                            subwayUnlocked:
+                                this.subwayUnlocked ||
+                                oldSave.subwayUnlocked ||
+                                false,
 
-nauseaActivated:
-    this.nauseaActivated ||
-    oldSave.nauseaActivated ||
-    false,
+                            nauseaActivated:
+                                this.nauseaActivated ||
+                                oldSave.nauseaActivated ||
+                                false,
 
-updatedAt:
-    Date.now()
-                };
+                            updatedAt:
+                                Date.now()
+                        };
 
-        } catch (error) {
+                } catch (error) {
 
-            console.log(
-                'Save error:',
-                error
+                    console.log(
+                        'Save error:',
+                        error
+                    );
+
+                }
+
+            }
+
+
+            localStorage.setItem(
+                'C2C_SAVE',
+                JSON.stringify(saveData)
             );
 
         }
 
-    }
-
-
-    localStorage.setItem(
-        'C2C_SAVE',
-        JSON.stringify(saveData)
-    );
-
-}
 
         /*
+         * =================================
          * LORE SCREEN
+         * =================================
          */
 
         if (this.gamePaused) {
@@ -1782,7 +1887,9 @@ updatedAt:
 
 
         /*
+         * =================================
          * MOVEMENT INPUT
+         * =================================
          */
 
         if (
@@ -1823,7 +1930,9 @@ updatedAt:
 
 
         /*
+         * =================================
          * DIAGONAL MOVEMENT
+         * =================================
          */
 
         if (
@@ -1847,20 +1956,25 @@ updatedAt:
 
         }
 
-/*
- * GLOBAL CONTROL INVERSION
- */
 
-if (this.nauseaActivated) {
+        /*
+         * =================================
+         * GLOBAL CONTROL INVERSION
+         * =================================
+         */
 
-    velocityX *= -1;
-    velocityY *= -1;
+        if (this.nauseaActivated) {
 
-}
+            velocityX *= -1;
+            velocityY *= -1;
+
+        }
 
 
         /*
+         * =================================
          * NEXT POSITION
+         * =================================
          */
 
         const delta =
@@ -1876,7 +1990,9 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * ROAD-ONLY MOVEMENT
+         * =================================
          */
 
         if (
@@ -1916,7 +2032,9 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * INTERACTION DISTANCES
+         * =================================
          */
 
         const distanceToBuilding =
@@ -1955,7 +2073,9 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * LORE PROMPT
+         * =================================
          */
 
         if (canReadLore) {
@@ -2026,7 +2146,9 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * PRESS E — LORE
+         * =================================
          */
 
         if (
@@ -2044,7 +2166,9 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * PRESS E — SAMOLE
+         * =================================
          */
 
         if (
@@ -2062,34 +2186,39 @@ if (this.nauseaActivated) {
 
 
         /*
+         * =================================
          * PRESS E — SUBWAY
+         * =================================
          */
 
-if (
-    canInteract2 &&
-    this.subwayUnlocked &&
-    Phaser.Input.Keyboard.JustDown(
-        this.interactKey
-    )
-) {
+        if (
+            canInteract2 &&
+            this.subwayUnlocked &&
+            Phaser.Input.Keyboard.JustDown(
+                this.interactKey
+            )
+        ) {
 
-    const gameMusic =
-        this.sound.get('gameMusic');
+            const gameMusic =
+                this.sound.get('gameMusic');
 
-    if (gameMusic) {
-        gameMusic.stop();
-    }
+            if (gameMusic) {
+                gameMusic.stop();
+            }
 
-    this.scene.start(
-        'SubwayTunnel1'
-    );
+            this.scene.start(
+                'SubwayTunnel1'
+            );
 
-    return;
+            return;
 
-}
+        }
+
 
         /*
+         * =================================
          * DARKNESS
+         * =================================
          */
 
         this.darkness.clear();
@@ -2119,7 +2248,9 @@ if (
 
 
         /*
+         * =================================
          * FACING DIRECTION
+         * =================================
          */
 
         if (
@@ -2154,7 +2285,9 @@ if (
 
 
         /*
+         * =================================
          * FLASHLIGHT
+         * =================================
          */
 
         this.flashlight.clear();
@@ -2229,6 +2362,156 @@ if (
         this.flashlight.closePath();
 
         this.flashlight.fillPath();
+
+
+        /*
+         * =================================
+         * FLASHLIGHT DETECTS EYES
+         * =================================
+         */
+
+        if (
+            this.eyes &&
+            this.lampForEyes
+        ) {
+
+            /*
+             * Is the streetlight currently ON?
+             */
+
+            const streetLightOn =
+                this.lampForEyes.visible &&
+                this.lampForEyes.alpha > 0;
+
+
+            /*
+             * If the streetlight is ON,
+             * the eyes must stay hidden.
+             */
+
+            if (streetLightOn) {
+
+                this.eyes.setVisible(
+                    false
+                );
+
+            } else {
+
+                /*
+                 * Streetlight is OFF.
+                 * Check whether the flashlight
+                 * is shining at the eyes.
+                 */
+
+                const dx =
+                    this.eyeX -
+                    this.player.x;
+
+                const dy =
+                    this.eyeY -
+                    this.player.y;
+
+                const distance =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                /*
+                 * Assume the flashlight is
+                 * NOT hitting the eyes.
+                 */
+
+                let flashlightHittingEyes =
+                    false;
+
+
+                /*
+                 * Eyes must be within
+                 * flashlight range.
+                 */
+
+                if (
+                    distance > 0 &&
+                    distance <= flashlightLength
+                ) {
+
+                    /*
+                     * Direction from player
+                     * towards the eyes.
+                     */
+
+                    const directionX =
+                        dx / distance;
+
+                    const directionY =
+                        dy / distance;
+
+
+                    /*
+                     * Dot product determines
+                     * whether the eyes are
+                     * inside the flashlight cone.
+                     */
+
+                    const dot =
+                        this.facingX *
+                        directionX +
+
+                        this.facingY *
+                        directionY;
+
+
+                    /*
+                     * 0.70 means the eyes
+                     * must be reasonably
+                     * centered in the beam.
+                     */
+
+                    if (
+                        dot >= 0.70
+                    ) {
+
+                        flashlightHittingEyes =
+                            true;
+
+                    }
+
+                }
+
+
+                /*
+                 * FINAL EYE STATE
+                 *
+                 * Streetlight OFF:
+                 *
+                 * Flashlight hitting eyes
+                 *     -> HIDDEN
+                 *
+                 * Flashlight away
+                 *     -> VISIBLE
+                 */
+
+                if (
+                    flashlightHittingEyes
+                ) {
+
+                    this.eyes.setVisible(
+                        false
+                    );
+
+                } else {
+
+                    this.eyes.setVisible(
+                        true
+                    );
+
+                }
+
+            }
+
+        }
 
     }
 
@@ -2484,3 +2767,4 @@ hostel doors locked at night.
     }
 
 }
+

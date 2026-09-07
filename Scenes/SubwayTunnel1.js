@@ -98,6 +98,53 @@ class SubwayTunnel1 extends Phaser.Scene {
         );
 
 
+                /*
+         * =================================
+         * CEILING EYES
+         * =================================
+         */
+
+        const tunnelEyes =
+            this.add.graphics();
+
+        tunnelEyes.setDepth(20);
+
+        /*
+         * Soft red glow behind the eyes
+         */
+
+        tunnelEyes.fillStyle(
+            0x8b0000,
+            0.12
+        );
+
+        tunnelEyes.fillCircle(
+            1800,
+            180,
+            28
+        );
+
+        /*
+         * The eyes
+         */
+
+        tunnelEyes.fillStyle(
+            0xff2222,
+            1
+        );
+
+        tunnelEyes.fillCircle(
+            1788,
+            180,
+            5
+        );
+
+        tunnelEyes.fillCircle(
+            1812,
+            180,
+            5
+        );
+
         /*
          * =================================
          * TOP WALKING AREA

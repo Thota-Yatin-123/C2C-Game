@@ -46,11 +46,23 @@ func handle_player_caught(player: Node3D) -> void:
 func player_caught() -> void:
 	lives -= 1
 	lives_changed.emit(lives)
+
+func player_caught() -> void:
+	lives -= 1
+	lives_changed.emit(lives)
+
 	if lives <= 0:
-		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		lives = MAX_LIVES
+		lives_changed.emit(lives)
+
+		JavaScriptBridge.eval("""
+			window.parent.postMessage(
+				{ type: 'GODOT_COMPLETE' },
+				'*'
+			);
+		""")
 	else:
-		# "Start the level again" - reload the current level fresh.
-		get_tree().reload_current_scene()
+		get_tree().reload_current_scene()	
 
 func quit_game() -> void:
 	get_tree().quit()
