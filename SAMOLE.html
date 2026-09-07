@@ -99,6 +99,39 @@
             pointer-events: none;
             z-index: 5;
         }
+#status-ui {
+    position: absolute;
+    top: 75px;
+    left: 20px;
+    color: #ffffff;
+    text-shadow: 0 0 6px #000;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.status-item {
+    margin-bottom: 12px;
+}
+
+.status-bar-container {
+    width: 180px;
+    height: 10px;
+    margin-top: 6px;
+    background: rgba(40, 40, 40, 0.8);
+    border: 1px solid #888;
+}
+
+#sprint-bar,
+#battery-bar {
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    transition: width 0.05s linear;
+}
+
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -117,19 +150,38 @@
         <span id="key-count">0</span> / 3
     </div>
 
+    <div id="status-ui">
+
+    <div class="status-item">
+        SPRINT
+        <div class="status-bar-container">
+            <div id="sprint-bar"></div>
+        </div>
+    </div>
+
+    <div class="status-item">
+        FLASHLIGHT
+        <div class="status-bar-container">
+            <div id="battery-bar"></div>
+        </div>
+    </div>
+
+</div>
+
     <div id="minimap-container">
         <canvas id="minimap" width="170" height="170"></canvas>
     </div>
 
     <div id="objective">
-        Search
-        <span style="color:#ff8888">P Block</span>,
-        <span style="color:#ff8888">Q Block</span> &
-        <span style="color:#ff8888">N Block</span>
-        for 3 Keys.
-        Escape via Main Gate!
-        [SHIFT to Sprint]
-    </div>
+    Search
+    <span style="color:#ff8888">P Block</span>,
+    <span style="color:#ff8888">Q Block</span> &
+    <span style="color:#ff8888">N Block</span>
+    for 3 Keys.
+    Escape via Main Gate!
+    <br>
+    [SHIFT to Sprint] [F to Toggle Flashlight]
+</div>
 
     <script>
 
@@ -145,6 +197,16 @@
         let moveRight = false;
         let isSprinting = false;
 
+        let flashlight;
+        let flashlightOn = false;
+        let flashlightGlow;
+        let flashlightBattery = 100;
+
+const FLASHLIGHT_DRAIN_RATE = 12;
+
+        const MAX_SPRINT_TIME = 5.0;
+        let sprintTime = MAX_SPRINT_TIME;
+
         let prevTime = performance.now();
 
         const velocity = new THREE.Vector3();
@@ -155,6 +217,7 @@
 
         let keysCollected = 0;
         const keysList = [];
+        const buildingColliders = [];
 
         let mainGate;
         let ghost;
@@ -162,6 +225,8 @@
         let ghostTexture;
 
         let gameOver = false;
+        let ghostVisibleOnMinimap = true;
+        let ghostMinimapTimer = 0;
 
         let minimapCanvas;
         let minimapCtx;
@@ -169,6 +234,11 @@
         const keyCountUI =
             document.getElementById('key-count');
 
+        const sprintBar =
+            document.getElementById('sprint-bar');
+
+        const batteryBar =
+    document.getElementById('battery-bar');
 
         // =========================================================
         // INITIALIZE IMMEDIATELY
@@ -255,7 +325,7 @@
             // Flashlight
             // -----------------------------------------------------
 
-            const flashlight =
+            flashlight =
                 new THREE.SpotLight(
                     0xfff0dd,
                     4.0,
@@ -287,6 +357,8 @@
 
             flashlight.target =
                 flashlightTarget;
+
+            flashlight.visible = false;
 
 
             // -----------------------------------------------------
@@ -514,6 +586,27 @@
             );
 
             camera.add(torchMesh);
+
+            const glowGeometry = new THREE.SphereGeometry(0.07, 12, 12);
+
+const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffff00
+});
+
+flashlightGlow = new THREE.Mesh(
+    glowGeometry,
+    glowMaterial
+);
+
+flashlightGlow.position.set(
+    0,
+    0,
+    -0.42
+);
+
+torchMesh.add(flashlightGlow);
+
+flashlightGlow.visible = false;
         }
 
 
@@ -911,12 +1004,29 @@
 
 
             group.position.set(
-                x,
-                0,
-                z
-            );
+    x,
+    0,
+    z
+);
 
-            scene.add(group);
+scene.add(group);
+
+// Building collision box
+const collider = new THREE.Box3();
+
+collider.min.set(
+    x - width / 2,
+    0,
+    z - depth / 2
+);
+
+collider.max.set(
+    x + width / 2,
+    height,
+    z + depth / 2
+);
+
+buildingColliders.push(collider);
         }
 
 
@@ -1567,44 +1677,48 @@
 
 
             // Ghost
+// Ghost
 
-            minimapCtx.fillStyle =
-                (
-                    Math.floor(
-                        Date.now() / 200
-                    ) % 2 === 0
-                )
-                    ? '#ff0000'
-                    : '#660000';
+if (ghostVisibleOnMinimap) {
 
-
-            const gx =
-                mapCenterX +
-                (
-                    ghost.position.x -
-                    px
-                ) * scale;
+    minimapCtx.fillStyle =
+        (
+            Math.floor(
+                Date.now() / 200
+            ) % 2 === 0
+        )
+            ? '#ff0000'
+            : '#660000';
 
 
-            const gy =
-                mapCenterY +
-                (
-                    ghost.position.z -
-                    pz
-                ) * scale;
+    const gx =
+        mapCenterX +
+        (
+            ghost.position.x -
+            px
+        ) * scale;
 
 
-            minimapCtx.beginPath();
+    const gy =
+        mapCenterY +
+        (
+            ghost.position.z -
+            pz
+        ) * scale;
 
-            minimapCtx.arc(
-                gx,
-                gy,
-                4.5,
-                0,
-                Math.PI * 2
-            );
 
-            minimapCtx.fill();
+    minimapCtx.beginPath();
+
+    minimapCtx.arc(
+        gx,
+        gy,
+        4.5,
+        0,
+        Math.PI * 2
+    );
+
+    minimapCtx.fill();
+}
 
 
             // Player
@@ -1707,6 +1821,26 @@
                 case 'ShiftRight':
                     isSprinting = true;
                     break;
+
+                case 'KeyF':
+
+    if (
+        flashlightBattery > 0
+    ) {
+
+        flashlightOn =
+            !flashlightOn;
+
+        flashlight.visible =
+            flashlightOn;
+
+        if (flashlightGlow) {
+            flashlightGlow.visible =
+                flashlightOn;
+        }
+    }
+
+    break;
             }
         }
 
@@ -1767,12 +1901,42 @@
             );
         }
 
+        function canMoveTo(x, z) {
+
+    const playerRadius = 0.8;
+
+    const playerBox = new THREE.Box3(
+        new THREE.Vector3(
+            x - playerRadius,
+            0,
+            z - playerRadius
+        ),
+        new THREE.Vector3(
+            x + playerRadius,
+            2,
+            z + playerRadius
+        )
+    );
+
+    for (const collider of buildingColliders) {
+
+        if (playerBox.intersectsBox(collider)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 
         // =========================================================
         // GAME LOOP
         // =========================================================
 
         function animate() {
+
+            
 
             requestAnimationFrame(
                 animate
@@ -1794,73 +1958,199 @@
             if (!gameOver) {
 
                 // -------------------------------------------------
-                // Movement
-                // -------------------------------------------------
+// Flashlight Battery
+// -------------------------------------------------
 
-                velocity.x -=
-                    velocity.x *
-                    12.0 *
-                    delta;
+if (
+    flashlightOn &&
+    flashlightBattery > 0
+) {
 
+    flashlightBattery -=
+        FLASHLIGHT_DRAIN_RATE *
+        delta;
 
-                velocity.z -=
-                    velocity.z *
-                    12.0 *
-                    delta;
+    if (
+        flashlightBattery <= 0
+    ) {
 
+        flashlightBattery = 0;
 
-                direction.z =
-                    Number(moveForward) -
-                    Number(moveBackward);
+        flashlightOn = false;
 
+        flashlight.visible = false;
+        if (flashlightGlow) {
+    flashlightGlow.visible = false;
+}
+    }
+}
+batteryBar.style.width =
+    `${flashlightBattery}%`;
+              
 
-                direction.x =
-                    Number(moveRight) -
-                    Number(moveLeft);
+// -------------------------------------------------
+// Movement
+// -------------------------------------------------
 
-
-                direction.normalize();
-
-
-                const baseSpeed =
-                    isSprinting
-                        ? 185.0
-                        : 120.0;
-
-
-                if (
-                    moveForward ||
-                    moveBackward
-                ) {
-
-                    velocity.z -=
-                        direction.z *
-                        baseSpeed *
-                        delta;
-                }
+const isMoving =
+    moveForward ||
+    moveBackward ||
+    moveLeft ||
+    moveRight;
 
 
-                if (
-                    moveLeft ||
-                    moveRight
-                ) {
+// -------------------------------------------------
+// Sprint
+// -------------------------------------------------
 
-                    velocity.x -=
-                        direction.x *
-                        baseSpeed *
-                        delta;
-                }
+if (
+    isSprinting &&
+    isMoving &&
+    sprintTime > 0
+) {
+
+    sprintTime -= delta;
+
+    if (sprintTime <= 0) {
+        sprintTime = 0;
+        isSprinting = false;
+    }
+}
 
 
-                yawObject.translateX(
-                    -velocity.x * delta
-                );
+const baseSpeed =
+    isSprinting && sprintTime > 0
+        ? 8.0
+        : 5.0;
 
 
-                yawObject.translateZ(
-                    velocity.z * delta
-                );
+// Update sprint bar
 
+const sprintPercent =
+    sprintTime / MAX_SPRINT_TIME;
+
+sprintBar.style.width =
+    `${sprintPercent * 100}%`;
+
+
+// -------------------------------------------------
+// Camera-relative movement
+// -------------------------------------------------
+
+let moveX = 0;
+let moveZ = 0;
+
+
+// Local movement
+
+if (moveForward) {
+    moveZ -= 1;
+}
+
+if (moveBackward) {
+    moveZ += 1;
+}
+
+if (moveLeft) {
+    moveX -= 1;
+}
+
+if (moveRight) {
+    moveX += 1;
+}
+
+
+// Normalize diagonal movement
+
+const moveLength =
+    Math.sqrt(
+        moveX * moveX +
+        moveZ * moveZ
+    );
+
+
+if (moveLength > 0) {
+
+    moveX /= moveLength;
+    moveZ /= moveLength;
+
+
+    // -------------------------------------------------
+    // Convert local movement to world movement
+    // based on camera yaw
+    // -------------------------------------------------
+
+    const forward =
+        -moveZ;
+
+    const strafe =
+        moveX;
+
+    const angle =
+        yawObject.rotation.y;
+
+
+    const worldX =
+        forward *
+            (-Math.sin(angle))
+        +
+        strafe *
+            Math.cos(angle);
+
+
+    const worldZ =
+        forward *
+            (-Math.cos(angle))
+        +
+        strafe *
+            (-Math.sin(angle));
+
+
+    const nextX =
+        yawObject.position.x +
+        worldX *
+        baseSpeed *
+        delta;
+
+
+    const nextZ =
+        yawObject.position.z +
+        worldZ *
+        baseSpeed *
+        delta;
+
+
+    // -------------------------------------------------
+    // Collision check — X
+    // -------------------------------------------------
+
+    if (
+        canMoveTo(
+            nextX,
+            yawObject.position.z
+        )
+    ) {
+
+        yawObject.position.x =
+            nextX;
+    }
+
+
+    // -------------------------------------------------
+    // Collision check — Z
+    // -------------------------------------------------
+
+    if (
+        canMoveTo(
+            yawObject.position.x,
+            nextZ
+        )
+    ) {
+
+        yawObject.position.z =
+            nextZ;
+    }
+}
 
                 yawObject.position.y =
                     1.7;
@@ -1991,7 +2281,7 @@
                 // -------------------------------------------------
 
                 const ghostSpeed =
-                    2.5 +
+                    4 +
                     (
                         keysCollected *
                         0.5
@@ -2038,7 +2328,43 @@
                 // Minimap
                 // -------------------------------------------------
 
-                drawMinimap();
+                // -------------------------------------------------
+// Ghost Minimap Visibility
+// -------------------------------------------------
+
+ghostMinimapTimer -= delta;
+
+if (ghostMinimapTimer <= 0) {
+
+    ghostVisibleOnMinimap =
+        !ghostVisibleOnMinimap;
+
+    if (ghostVisibleOnMinimap) {
+
+        // Ghost visible for 4–8 seconds
+        ghostMinimapTimer =
+            THREE.MathUtils.randFloat(
+                4,
+                8
+            );
+
+    } else {
+
+        // Ghost hidden for 3–7 seconds
+        ghostMinimapTimer =
+            THREE.MathUtils.randFloat(
+                3,
+                7
+            );
+    }
+}
+
+
+// -------------------------------------------------
+// Minimap
+// -------------------------------------------------
+
+drawMinimap();
 
 
                 // -------------------------------------------------
