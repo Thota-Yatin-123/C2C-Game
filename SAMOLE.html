@@ -132,6 +132,24 @@
     transition: width 0.05s linear;
 }
 
+#death-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #ff0000;
+    font-size: 64px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px #ff0000;
+    z-index: 100;
+}
+
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -183,6 +201,10 @@
     [SHIFT to Sprint] [F to Toggle Flashlight]
 </div>
 
+<div id="death-screen">
+    YOU DIED
+</div>
+
     <script>
 
         // =========================================================
@@ -216,6 +238,8 @@ const FLASHLIGHT_DRAIN_RATE = 12;
         let yawObject;
 
         let keysCollected = 0;
+        let collectedKeyIds = [];
+        let committedKeyIds = [];
         const keysList = [];
         const buildingColliders = [];
 
@@ -302,6 +326,68 @@ const FLASHLIGHT_DRAIN_RATE = 12;
                 1.7,
                 40
             );
+
+            /*
+ * =================================
+ * LOAD SAVED SAMOLE POSITION
+ * =================================
+ */
+
+const samoleSave =
+    localStorage.getItem(
+        'C2C_SAVE'
+    );
+
+if (samoleSave) {
+
+    try {
+
+        const saveData =
+            JSON.parse(
+                samoleSave
+            );
+
+        if (
+            saveData.scene === 'SAMOLE' &&
+            saveData.samole
+        ) {
+
+            yawObject.position.set(
+                saveData.samole.x,
+                saveData.samole.y,
+                saveData.samole.z
+            );
+
+            yawObject.rotation.y =
+                saveData.samole.rotationY ||
+                0;
+
+            pitchObject.rotation.x =
+                saveData.samole.rotationX ||
+                0;
+
+            flashlightBattery =
+                typeof saveData.samole.flashlightBattery === 'number'
+                    ? saveData.samole.flashlightBattery
+                    : 100;
+
+            sprintTime =
+                typeof saveData.samole.sprintTime === 'number'
+                    ? saveData.samole.sprintTime
+                    : MAX_SPRINT_TIME;
+
+        }
+
+    } catch (error) {
+
+        console.log(
+            'SAMOLE position load error:',
+            error
+        );
+
+    }
+
+}
 
             yawObject.add(pitchObject);
 
@@ -1279,6 +1365,61 @@ buildingColliders.push(collider);
             );
         }
 
+        /*
+ * =================================
+ * LOAD SAVED KEY PROGRESS
+ * =================================
+ */
+
+const saveFile =
+    localStorage.getItem(
+        'C2C_SAVE'
+    );
+
+if (saveFile) {
+
+    try {
+
+        const saveData =
+            JSON.parse(saveFile);
+
+        committedKeyIds =
+    saveData.completedKeys || [];
+
+collectedKeyIds =
+    [...committedKeyIds];
+
+keysCollected =
+    committedKeyIds.length;
+
+        keyCountUI.innerText =
+            keysCollected;
+
+    } catch (error) {
+
+        console.log(
+            'SAMOLE save load:',
+            error
+        );
+
+    }
+
+}
+
+committedKeyIds.forEach(
+    keyId => {
+
+        if (
+            keysList[keyId]
+        ) {
+
+            keysList[keyId].visible =
+                false;
+
+        }
+
+    }
+);
 
         // =========================================================
         // GHOST
@@ -1630,53 +1771,48 @@ buildingColliders.push(collider);
                 4
             );
 
+// Keys
 
-            // Keys
+keysList.forEach(
+    (keyGroup) => {
 
-            minimapCtx.fillStyle =
-                '#ffff00';
+        if (!keyGroup.visible) {
+            return;
+        }
 
+        const kx =
+            mapCenterX +
+            (
+                keyGroup.position.x -
+                px
+            ) * scale;
 
-            keysList.forEach(
-                key => {
+        const ky =
+            mapCenterY +
+            (
+                keyGroup.position.z -
+                pz
+            ) * scale;
 
-                    if (
-                        key.visible
-                    ) {
+        minimapCtx.fillStyle =
+            '#ffff00';
 
-                        const kx =
-                            mapCenterX +
-                            (
-                                key.position.x -
-                                px
-                            ) * scale;
+        minimapCtx.beginPath();
 
+        minimapCtx.arc(
+            kx,
+            ky,
+            3.5,
+            0,
+            Math.PI * 2
+        );
 
-                        const ky =
-                            mapCenterY +
-                            (
-                                key.position.z -
-                                pz
-                            ) * scale;
-
-
-                        minimapCtx.beginPath();
-
-                        minimapCtx.arc(
-                            kx,
-                            ky,
-                            3.5,
-                            0,
-                            Math.PI * 2
-                        );
-
-                        minimapCtx.fill();
-                    }
-                }
-            );
+        minimapCtx.fill();
+    }
+);
 
 
-            // Ghost
+
 // Ghost
 
 if (ghostVisibleOnMinimap) {
@@ -2215,98 +2351,94 @@ if (moveLength > 0) {
 
 
                 // -------------------------------------------------
-                // Key Pickup
-                // -------------------------------------------------
-
-                keysList.forEach(
-                    keyGroup => {
-
-                        if (
-                            !keyGroup.visible
-                        ) {
-                            return;
-                        }
-
-
-                        keyGroup.rotation.y +=
-                            2.5 *
-                            delta;
-
-
-                        const dist =
-                            yawObject.position
-                                .distanceTo(
-                                    keyGroup.position
-                                );
-
-
-                        if (
-                            dist < 3.2
-                        ) {
-
-                            keyGroup.visible =
-                                false;
-
-
-                            keysCollected++;
-
-
-                            keyCountUI.innerText =
-                                keysCollected;
-
-
-                            // -------------------------------------
-                            // Tell Level 1 that all keys are found
-                            // -------------------------------------
-
-                            if (
-                                keysCollected === 3
-                            ) {
-
-                                window.parent.postMessage(
-                                    {
-                                        type:
-                                            'SAMOLE_KEYS_COLLECTED'
-                                    },
-                                    '*'
-                                );
-                            }
-                        }
-                    }
-                );
-
-
-                // -------------------------------------------------
                 // Ghost AI
                 // -------------------------------------------------
 
                 const ghostSpeed =
-                    4 +
-                    (
-                        keysCollected *
-                        0.5
-                    );
+    4 +
+    (
+        keysCollected *
+        0.5
+    );
 
 
-                const ghostDir =
-                    new THREE.Vector3()
-                        .subVectors(
-                            yawObject.position,
-                            ghost.position
-                        );
+// -------------------------------------------------
+// Flashlight repels ghost
+// -------------------------------------------------
+
+let ghostRepelled =
+    false;
+
+if (flashlightOn) {
+
+    const cameraDirection =
+        new THREE.Vector3();
+
+    camera.getWorldDirection(
+        cameraDirection
+    );
+
+    const toGhost =
+        new THREE.Vector3()
+            .subVectors(
+                ghost.position,
+                yawObject.position
+            );
+
+    toGhost.y = 0;
+    toGhost.normalize();
+
+    cameraDirection.y = 0;
+    cameraDirection.normalize();
+
+    const flashlightAngle =
+        cameraDirection.dot(
+            toGhost
+        );
+
+    // Roughly the same cone as the flashlight
+    if (flashlightAngle > 0.82) {
+
+        ghostRepelled = true;
+    }
+}
 
 
-                ghostDir.y = 0;
+// -------------------------------------------------
+// Ghost movement
+// -------------------------------------------------
 
-                ghostDir.normalize();
+const ghostDir =
+    new THREE.Vector3()
+        .subVectors(
+            yawObject.position,
+            ghost.position
+        );
+
+ghostDir.y = 0;
+ghostDir.normalize();
 
 
-                ghost.position.add(
-                    ghostDir.multiplyScalar(
-                        ghostSpeed *
-                        delta
-                    )
-                );
+if (ghostRepelled) {
+
+    // Move AWAY from player
+    ghost.position.add(
+        ghostDir.multiplyScalar(
+            -3.0 *
+            delta
+        )
+    );
+
+} else {
+
+    // Normal chase
+    ghost.position.add(
+        ghostDir.multiplyScalar(
+            ghostSpeed *
+            delta
+        )
+    );
+}
 
 
                 ghost.position.y =
@@ -2359,6 +2491,65 @@ if (ghostMinimapTimer <= 0) {
     }
 }
 
+// -------------------------------------------------
+// Key Pickup
+// -------------------------------------------------
+
+keysList.forEach(
+    (keyGroup, keyId) => {
+
+        if (!keyGroup.visible) {
+            return;
+        }
+
+        keyGroup.rotation.y +=
+            2.5 * delta;
+
+        const dist =
+            yawObject.position.distanceTo(
+                keyGroup.position
+            );
+
+        if (dist < 3.2) {
+
+            keyGroup.visible =
+                false;
+
+            keysCollected++;
+
+            keyCountUI.innerText =
+                keysCollected;
+
+            if (
+    !collectedKeyIds.includes(
+        keyId
+    )
+) {
+
+    collectedKeyIds.push(
+        keyId
+    );
+
+    committedKeyIds =
+        [...collectedKeyIds];
+}
+
+            if (
+                keysCollected === 3
+            ) {
+
+                window.parent.postMessage(
+                    {
+                        type:
+                            'SAMOLE_KEYS_COLLECTED'
+                    },
+                    '*'
+                );
+            }
+        }
+    }
+);
+
 
 // -------------------------------------------------
 // Minimap
@@ -2410,6 +2601,95 @@ drawMinimap();
                 }
             }
 
+            /*
+ * =================================
+ * AUTO SAVE SAMOLE POSITION
+ * =================================
+ */
+
+if (
+    typeof saveTimer === 'undefined'
+) {
+    window.saveTimer = 0;
+}
+
+window.saveTimer +=
+    delta * 1000;
+
+if (
+    window.saveTimer >= 1000
+) {
+
+    window.saveTimer = 0;
+
+    const existingSave =
+        localStorage.getItem(
+            'C2C_SAVE'
+        );
+
+    let saveData = {
+
+        version: 1,
+
+        scene: 'SAMOLE',
+
+completedKeys:
+    [...collectedKeyIds],
+
+        level1: null,
+
+        samole: null,
+
+        updatedAt:
+            Date.now()
+
+    };
+
+
+    if (existingSave) {
+
+        try {
+
+            const oldSave =
+                JSON.parse(
+                    existingSave
+                );
+
+            saveData =
+                {
+                    ...oldSave,
+
+                    scene:
+                        'SAMOLE',
+
+completedKeys:
+    [...collectedKeyIds],
+
+                    samole: null,
+
+                    updatedAt:
+                        Date.now()
+                };
+
+        } catch (error) {
+
+            console.log(
+                'SAMOLE save error:',
+                error
+            );
+
+        }
+
+    }
+
+
+    localStorage.setItem(
+        'C2C_SAVE',
+        JSON.stringify(saveData)
+    );
+
+}
+
 
             renderer.render(
                 scene,
@@ -2432,29 +2712,124 @@ drawMinimap();
             gameOver = true;
 
 
-            if (won) {
+           if (won) {
 
-                // -----------------------------------------------
-                // Return to Phaser Level 1
-                // -----------------------------------------------
+    /*
+     * =================================
+     * COMMIT COMPLETED KEYS
+     * =================================
+     */
 
-                window.parent.postMessage(
-                    {
-                        type:
-                            'SAMOLE_ESCAPE'
-                    },
-                    '*'
+    const existingSave =
+        localStorage.getItem(
+            'C2C_SAVE'
+        );
+
+    let saveData = {};
+
+    if (existingSave) {
+
+        try {
+
+            saveData =
+                JSON.parse(
+                    existingSave
                 );
 
-            } else {
+        } catch (error) {
 
-                // -----------------------------------------------
-                // Death -> Main Menu
-                // -----------------------------------------------
+            console.log(
+                'Save parse error:',
+                error
+            );
 
-                window.top.location.href =
-                    'index.html';
-            }
+        }
+
+    }
+
+
+    saveData.version =
+        1;
+
+    saveData.scene =
+        'Level1Scene';
+
+    saveData.completedKeys =
+        [...collectedKeyIds];
+
+    saveData.samole = {
+
+        x:
+            yawObject.position.x,
+
+        y:
+            yawObject.position.y,
+
+        z:
+            yawObject.position.z,
+
+        rotationY:
+            yawObject.rotation.y,
+
+        rotationX:
+            pitchObject.rotation.x,
+
+        flashlightBattery:
+            flashlightBattery,
+
+        sprintTime:
+            sprintTime
+
+    };
+
+    saveData.updatedAt =
+        Date.now();
+
+
+    localStorage.setItem(
+        'C2C_SAVE',
+        JSON.stringify(
+            saveData
+        )
+    );
+
+
+    /*
+     * =================================
+     * TELL LEVEL 1
+     * =================================
+     */
+
+    window.parent.postMessage(
+        {
+            type:
+                'SAMOLE_ESCAPE'
+        },
+        '*'
+    );
+
+} else {
+
+    // -----------------------------------------------
+    // Death Screen
+    // -----------------------------------------------
+
+    const deathScreen =
+        document.getElementById(
+            'death-screen'
+        );
+
+    deathScreen.style.display =
+        'flex';
+
+    setTimeout(
+        () => {
+            window.top.location.href =
+                'index.html';
+        },
+        2500
+    );
+}
         }
 
     </script>

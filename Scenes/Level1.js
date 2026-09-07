@@ -806,7 +806,127 @@ class Level1Scene extends Phaser.Scene {
             true
         );
 
+        /*
+ * =================================
+ * RETURN FROM SUBWAY
+ * =================================
+ */
 
+const returnFromSubway =
+    localStorage.getItem(
+        'C2C_RETURN_FROM_SUBWAY'
+    );
+
+if (
+    returnFromSubway === 'true'
+) {
+
+    const saveFile =
+        localStorage.getItem(
+            'C2C_SAVE'
+        );
+
+    if (saveFile) {
+
+        try {
+
+            const saveData =
+                JSON.parse(
+                    saveFile
+                );
+
+            if (
+                saveData.level1 &&
+                typeof saveData.level1.x === 'number' &&
+                typeof saveData.level1.y === 'number'
+            ) {
+
+                this.player.setPosition(
+                    saveData.level1.x,
+                    saveData.level1.y
+                );
+
+            }
+
+        } catch (error) {
+
+            console.log(
+                'Level 1 return error:',
+                error
+            );
+
+        }
+
+    }
+
+    localStorage.removeItem(
+        'C2C_RETURN_FROM_SUBWAY'
+    );
+
+}
+
+
+        /*
+ * =================================
+ * LOAD SAVE
+ * =================================
+ */
+
+const loadGame =
+    localStorage.getItem(
+        'C2C_LOAD_GAME'
+    );
+
+const saveFile =
+    localStorage.getItem(
+        'C2C_SAVE'
+    );
+
+if (
+    loadGame === 'true' &&
+    saveFile
+) {
+
+    try {
+
+        const saveData =
+            JSON.parse(saveFile);
+
+        if (
+            saveData.level1 &&
+            typeof saveData.level1.x === 'number' &&
+            typeof saveData.level1.y === 'number'
+        ) {
+
+            this.player.setPosition(
+                saveData.level1.x,
+                saveData.level1.y
+            );
+
+        }
+
+this.subwayUnlocked =
+    (
+        saveData.completedKeys &&
+        saveData.completedKeys.length >= 3
+    ) ||
+    saveData.subwayUnlocked ||
+    false;
+
+    } catch (error) {
+
+        console.log(
+            'Save load error:',
+            error
+        );
+
+    }
+
+    localStorage.removeItem(
+        'C2C_LOAD_GAME'
+    );
+
+}
         /*
          * =================================
          * MOVEMENT KEYS
@@ -1024,7 +1144,8 @@ this.facingY = -1;
         this.interactionX2 = 1600;
         this.interactionY2 = 1000;
 
-        this.subwayUnlocked = false;
+        //DELETE THIS!!!
+        this.subwayUnlocked = true;
 
 
         /*
@@ -1180,16 +1301,16 @@ this.facingY = -1;
              */
 
             if (
-                event.data &&
-                event.data.type ===
-                'SAMOLE_KEYS_COLLECTED'
-            ) {
+    event.data &&
+    event.data.type ===
+    'SAMOLE_KEYS_COLLECTED'
+) {
 
-                this.subwayUnlocked = true;
+    this.subwayUnlocked = true;
 
-                return;
+    return;
 
-            }
+}
 
 
             /*
@@ -1543,6 +1664,99 @@ this.facingY = -1;
     update() {
 
         /*
+ * =================================
+ * AUTO SAVE POSITION
+ * =================================
+ */
+
+this.saveTimer =
+    (this.saveTimer || 0) +
+    this.game.loop.delta;
+
+if (
+    this.saveTimer >= 1000
+) {
+
+    this.saveTimer = 0;
+
+    const existingSave =
+        localStorage.getItem(
+            'C2C_SAVE'
+        );
+
+    let saveData = {
+
+        version: 1,
+
+        scene: 'Level1Scene',
+
+        completedKeys: [],
+
+        level1: {
+            x: this.player.x,
+            y: this.player.y
+        },
+
+        samole: null,
+
+        subwayUnlocked:
+            this.subwayUnlocked || false,
+
+        updatedAt:
+            Date.now()
+
+    };
+
+
+    if (existingSave) {
+
+        try {
+
+            const oldSave =
+                JSON.parse(existingSave);
+
+            saveData =
+                {
+                    ...saveData,
+                    ...oldSave,
+
+                    scene:
+                        'Level1Scene',
+
+                    level1: {
+                        x: this.player.x,
+                        y: this.player.y
+                    },
+
+                    subwayUnlocked:
+                        this.subwayUnlocked ||
+                        oldSave.subwayUnlocked ||
+                        false,
+
+                    updatedAt:
+                        Date.now()
+                };
+
+        } catch (error) {
+
+            console.log(
+                'Save error:',
+                error
+            );
+
+        }
+
+    }
+
+
+    localStorage.setItem(
+        'C2C_SAVE',
+        JSON.stringify(saveData)
+    );
+
+}
+
+        /*
          * LORE SCREEN
          */
 
@@ -1569,7 +1783,7 @@ this.facingY = -1;
         }
 
 
-        const speed = 300;
+        const speed = 100;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -1848,13 +2062,13 @@ this.facingY = -1;
          * PRESS E — SUBWAY
          */
 
-        if (
-            canInteract2 &&
-            this.subwayUnlocked &&
-            Phaser.Input.Keyboard.JustDown(
-                this.interactKey
-            )
-        ) {
+if (
+    canInteract2 &&
+    this.subwayUnlocked &&
+    Phaser.Input.Keyboard.JustDown(
+        this.interactKey
+    )
+) {
 
             this.scene.start(
                 'SubwayTunnel1'

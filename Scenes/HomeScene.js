@@ -17,9 +17,9 @@ preload() {
     );
 
     this.load.audio(
-    'gameMusic',
-    'assets/GameAudio.wav'
-);
+        'gameMusic',
+        'assets/GameAudio.wav'
+    );
 
 }
 
@@ -275,47 +275,16 @@ createButton(x, y, text) {
             yoyo: true
         });
 
-if (text === 'START') {
+        if (text === 'START') {
 
-    // Play the start sound
-    if (this.soundEnabled) {
-        this.sound.play('startAudio');
-    }
+            // Play the start sound
+            if (this.soundEnabled) {
+                this.sound.play('startAudio');
+            }
 
-    // Start background music
-    if (this.musicEnabled) {
+            this.openSaveMenu();
 
-        let music = this.sound.get('gameMusic');
-
-        if (!music) {
-            music = this.sound.add('gameMusic', {
-                loop: true,
-                volume: 0.5
-            });
         }
-
-        if (!music.isPlaying) {
-            music.play();
-        }
-    }
-
-    const saveFile =
-        localStorage.getItem('C2C_SAVE');
-
-    if (saveFile) {
-
-        const saveData =
-            JSON.parse(saveFile);
-
-        this.scene.start(saveData.scene);
-
-    } else {
-
-        this.scene.start('Level1Scene');
-
-    }
-
-}
 
         if (text === 'SETTINGS') {
 
@@ -331,19 +300,20 @@ if (text === 'START') {
 
             const exitScreen = document.createElement('div');
 
-exitScreen.style.width = '100vw';
-exitScreen.style.height = '100vh';
-exitScreen.style.background = '#050505';
-exitScreen.style.color = '#8b1111';
-exitScreen.style.display = 'flex';
-exitScreen.style.justifyContent = 'center';
-exitScreen.style.alignItems = 'center';
-exitScreen.style.fontFamily = 'Arial';
-exitScreen.style.fontSize = '32px';
+            exitScreen.style.width = '100vw';
+            exitScreen.style.height = '100vh';
+            exitScreen.style.background = '#050505';
+            exitScreen.style.color = '#8b1111';
+            exitScreen.style.display = 'flex';
+            exitScreen.style.justifyContent = 'center';
+            exitScreen.style.alignItems = 'center';
+            exitScreen.style.fontFamily = 'Arial';
+            exitScreen.style.fontSize = '32px';
 
-exitScreen.textContent = 'GAME EXITED';
+            exitScreen.textContent = 'GAME EXITED';
 
-document.body.appendChild(exitScreen);
+            document.body.appendChild(exitScreen);
+
         }
 
     });
@@ -372,7 +342,7 @@ openSettings() {
 
     this.settingsOverlay.setDepth(2000);
     this.settingsOverlay.setInteractive();
-this.settingsOverlay.input.cursor = 'default';
+    this.settingsOverlay.input.cursor = 'default';
 
     this.settingsPanel = this.add.graphics();
 
@@ -572,51 +542,53 @@ createSettingToggle(x, y, labelText, setting) {
     );
 
     toggle.input.cursor = 'pointer';
-toggle.on('pointerdown', () => {
 
-    if (setting === 'music') {
+    toggle.on('pointerdown', () => {
 
-        this.musicEnabled =
-            !this.musicEnabled;
+        if (setting === 'music') {
 
-        localStorage.setItem(
-            'C2C_MUSIC',
-            this.musicEnabled
-        );
+            this.musicEnabled =
+                !this.musicEnabled;
 
-        const music = this.sound.get('gameMusic');
+            localStorage.setItem(
+                'C2C_MUSIC',
+                this.musicEnabled
+            );
 
-        if (music) {
+            const music =
+                this.sound.get('gameMusic');
 
-            if (this.musicEnabled) {
+            if (music) {
 
-                if (!music.isPlaying) {
-                    music.play();
+                if (this.musicEnabled) {
+
+                    if (!music.isPlaying) {
+                        music.play();
+                    }
+
+                } else {
+
+                    music.stop();
+
                 }
-
-            } else {
-
-                music.stop();
 
             }
 
+        } else {
+
+            this.soundEnabled =
+                !this.soundEnabled;
+
+            localStorage.setItem(
+                'C2C_SOUND',
+                this.soundEnabled
+            );
+
         }
 
-    } else {
+        updateToggle();
 
-        this.soundEnabled =
-            !this.soundEnabled;
-
-        localStorage.setItem(
-            'C2C_SOUND',
-            this.soundEnabled
-        );
-
-    }
-
-    updateToggle();
-
-});
+    });
 
     this.settingsObjects =
         this.settingsObjects || [];
@@ -784,7 +756,9 @@ closeSettings() {
 
     if (this.settingsObjects) {
 
-        for (const object of this.settingsObjects) {
+        for (
+            const object of this.settingsObjects
+        ) {
 
             if (object.stateText) {
                 object.stateText.destroy();
@@ -800,5 +774,702 @@ closeSettings() {
 
 }
 
+openSaveMenu() {
+
+    if (this.saveMenuOpen) {
+        return;
+    }
+
+    this.saveMenuOpen = true;
+
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+
+    this.saveOverlay = this.add.rectangle(
+        centerX,
+        centerY,
+        this.scale.width,
+        this.scale.height,
+        0x000000,
+        0.75
+    );
+
+    this.saveOverlay.setDepth(2000);
+    this.saveOverlay.setInteractive();
+
+    this.saveOverlay.input.cursor =
+        'default';
+
+    this.savePanel = this.add.graphics();
+
+    this.savePanel.setDepth(2001);
+
+    const panelWidth = 700;
+    const panelHeight = 480;
+
+    this.savePanel.fillStyle(
+        0x171311,
+        0.98
+    );
+
+    this.savePanel.lineStyle(
+        3,
+        0x6b3a2a,
+        1
+    );
+
+    this.savePanel.beginPath();
+
+    this.savePanel.moveTo(
+        centerX - panelWidth / 2 + 30,
+        centerY - panelHeight / 2
+    );
+
+    this.savePanel.lineTo(
+        centerX + panelWidth / 2 - 30,
+        centerY - panelHeight / 2
+    );
+
+    this.savePanel.lineTo(
+        centerX + panelWidth / 2,
+        centerY - panelHeight / 2 + 30
+    );
+
+    this.savePanel.lineTo(
+        centerX + panelWidth / 2,
+        centerY + panelHeight / 2 - 30
+    );
+
+    this.savePanel.lineTo(
+        centerX + panelWidth / 2 - 30,
+        centerY + panelHeight / 2
+    );
+
+    this.savePanel.lineTo(
+        centerX - panelWidth / 2 + 30,
+        centerY + panelHeight / 2
+    );
+
+    this.savePanel.lineTo(
+        centerX - panelWidth / 2,
+        centerY + panelHeight / 2 - 30
+    );
+
+    this.savePanel.lineTo(
+        centerX - panelWidth / 2,
+        centerY - panelHeight / 2 + 30
+    );
+
+    this.savePanel.closePath();
+
+    this.savePanel.fillPath();
+    this.savePanel.strokePath();
+
+    this.saveTitle = this.add.text(
+        centerX,
+        centerY - 180,
+        'SAVE FILE',
+        {
+            fontFamily: 'Arial',
+            fontSize: '34px',
+            fontStyle: 'bold',
+            color: '#d6c8bd',
+            letterSpacing: 4
+        }
+    ).setOrigin(0.5);
+
+    this.saveTitle.setDepth(2002);
+
+    this.saveObjects = [];
+
+    const saveFile =
+        localStorage.getItem('C2C_SAVE');
+
+    if (saveFile) {
+
+        let saveData = null;
+
+        try {
+
+            saveData =
+                JSON.parse(saveFile);
+
+        } catch (error) {
+
+            console.log(
+                'Invalid save file:',
+                error
+            );
+
+        }
+
+        if (saveData) {
+
+            this.createSaveSlot(
+                centerX,
+                centerY - 65,
+                saveData
+            );
+
+        } else {
+
+            this.createNewGameButton(
+                centerX,
+                centerY - 20
+            );
+
+        }
+
+    } else {
+
+        this.createNewGameButton(
+            centerX,
+            centerY - 20
+        );
+
+    }
+
+    if (saveFile) {
+
+        this.createNewGameButton(
+            centerX,
+            centerY + 85
+        );
+
+    }
+
+    this.createSaveBackButton(
+        centerX,
+        centerY + 170
+    );
+
+}
+
+createSaveSlot(x, y, saveData) {
+
+    const width = 520;
+    const height = 95;
+
+    const slot =
+        this.add.graphics();
+
+    slot.setDepth(2002);
+
+    const drawSlot = (
+        fill,
+        border
+    ) => {
+
+        slot.clear();
+
+        slot.fillStyle(
+            fill,
+            1
+        );
+
+        slot.lineStyle(
+            2,
+            border,
+            1
+        );
+
+        slot.fillRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            10
+        );
+
+        slot.strokeRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            10
+        );
+
+    };
+
+    drawSlot(
+        0x2b2522,
+        0x6b3a2a
+    );
+
+    const title =
+        this.add.text(
+            x - 220,
+            y,
+            'SAVE FILE',
+            {
+                fontFamily: 'Arial',
+                fontSize: '22px',
+                fontStyle: 'bold',
+                color: '#00ff66'
+            }
+        ).setOrigin(0, 0.5);
+
+    title.setDepth(2003);
+
+    const playButton =
+        this.add.text(
+            x + 165,
+            y,
+            '▶',
+            {
+                fontFamily: 'Arial',
+                fontSize: '28px',
+                fontStyle: 'bold',
+                color: '#00ff66'
+            }
+        ).setOrigin(0.5);
+
+    playButton.setDepth(2004);
+
+    playButton.setInteractive({
+        useHandCursor: true
+    });
+
+    const deleteButton =
+        this.add.text(
+            x + 215,
+            y,
+            '🗑',
+            {
+                fontFamily: 'Arial',
+                fontSize: '24px',
+                color: '#d6c8bd'
+            }
+        ).setOrigin(0.5);
+
+    deleteButton.setDepth(2004);
+
+    deleteButton.setInteractive({
+        useHandCursor: true
+    });
+
+    slot.setInteractive(
+        new Phaser.Geom.Rectangle(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height
+        ),
+        Phaser.Geom.Rectangle.Contains
+    );
+
+    slot.input.cursor =
+        'pointer';
+
+    slot.on(
+        'pointerover',
+        () => {
+
+            drawSlot(
+                0x3a2925,
+                0x9b2b20
+            );
+
+            title.setColor(
+                '#ffffff'
+            );
+
+            playButton.setColor(
+                '#ffffff'
+            );
+
+            deleteButton.setColor(
+                '#ffffff'
+            );
+
+        }
+    );
+
+    slot.on(
+        'pointerout',
+        () => {
+
+            drawSlot(
+                0x2b2522,
+                0x6b3a2a
+            );
+
+            title.setColor(
+                '#d6c8bd'
+            );
+
+            playButton.setColor(
+                '#d6c8bd'
+            );
+
+            deleteButton.setColor(
+                '#d6c8bd'
+            );
+
+        }
+    );
+
+    playButton.on(
+        'pointerdown',
+        () => {
+
+            this.loadSaveGame(
+                saveData
+            );
+
+        }
+    );
+
+    deleteButton.on(
+        'pointerdown',
+        () => {
+
+            localStorage.removeItem(
+                'C2C_SAVE'
+            );
+
+            this.closeSaveMenu();
+
+            this.openSaveMenu();
+
+        }
+    );
+
+    this.saveObjects.push(
+        slot,
+        title,
+        playButton,
+        deleteButton
+    );
+
+}
+
+createNewGameButton(x, y) {
+
+    const button =
+        this.add.graphics();
+
+    button.setDepth(2002);
+
+    const width = 300;
+    const height = 55;
+
+    const drawButton = (
+        fill,
+        border
+    ) => {
+
+        button.clear();
+
+        button.fillStyle(
+            fill,
+            1
+        );
+
+        button.lineStyle(
+            3,
+            border,
+            1
+        );
+
+        button.fillRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            8
+        );
+
+        button.strokeRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            8
+        );
+
+    };
+
+    drawButton(
+        0x2b2522,
+        0x6b3a2a
+    );
+
+    const label =
+        this.add.text(
+            x,
+            y,
+            '+ NEW GAME',
+            {
+                fontFamily: 'Arial',
+                fontSize: '20px',
+                fontStyle: 'bold',
+                color: '#d6c8bd',
+                letterSpacing: 2
+            }
+        ).setOrigin(0.5);
+
+    label.setDepth(2003);
+
+    button.setInteractive(
+        new Phaser.Geom.Rectangle(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height
+        ),
+        Phaser.Geom.Rectangle.Contains
+    );
+
+    button.input.cursor =
+        'pointer';
+
+    button.on(
+        'pointerover',
+        () => {
+
+            drawButton(
+                0x3a2925,
+                0x9b2b20
+            );
+
+            label.setColor(
+                '#ffffff'
+            );
+
+        }
+    );
+
+    button.on(
+        'pointerout',
+        () => {
+
+            drawButton(
+                0x2b2522,
+                0x6b3a2a
+            );
+
+            label.setColor(
+                '#d6c8bd'
+            );
+
+        }
+    );
+
+    button.on(
+        'pointerdown',
+        () => {
+
+            localStorage.removeItem(
+                'C2C_SAVE'
+            );
+
+            this.closeSaveMenu();
+
+            this.scene.start(
+                'Level1Scene'
+            );
+
+        }
+    );
+
+    this.saveObjects.push(
+        button,
+        label
+    );
+
+}
+
+createSaveBackButton(x, y) {
+
+    const button =
+        this.add.graphics();
+
+    button.setDepth(2002);
+
+    const width = 220;
+    const height = 55;
+
+    const drawButton = (
+        fill,
+        border
+    ) => {
+
+        button.clear();
+
+        button.fillStyle(
+            fill,
+            1
+        );
+
+        button.lineStyle(
+            3,
+            border,
+            1
+        );
+
+        button.fillRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            8
+        );
+
+        button.strokeRoundedRect(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height,
+            8
+        );
+
+    };
+
+    drawButton(
+        0x2b2522,
+        0x6b3a2a
+    );
+
+    const label =
+        this.add.text(
+            x,
+            y,
+            'BACK',
+            {
+                fontFamily: 'Arial',
+                fontSize: '20px',
+                fontStyle: 'bold',
+                color: '#d6c8bd',
+                letterSpacing: 2
+            }
+        ).setOrigin(0.5);
+
+    label.setDepth(2003);
+
+    button.setInteractive(
+        new Phaser.Geom.Rectangle(
+            x - width / 2,
+            y - height / 2,
+            width,
+            height
+        ),
+        Phaser.Geom.Rectangle.Contains
+    );
+
+    button.input.cursor =
+        'pointer';
+
+    button.on(
+        'pointerover',
+        () => {
+
+            drawButton(
+                0x3a2925,
+                0x9b2b20
+            );
+
+            label.setColor(
+                '#ffffff'
+            );
+
+        }
+    );
+
+    button.on(
+        'pointerout',
+        () => {
+
+            drawButton(
+                0x2b2522,
+                0x6b3a2a
+            );
+
+            label.setColor(
+                '#d6c8bd'
+            );
+
+        }
+    );
+
+    button.on(
+        'pointerdown',
+        () => {
+
+            this.closeSaveMenu();
+
+        }
+    );
+
+    this.saveObjects.push(
+        button,
+        label
+    );
+
+}
+
+loadSaveGame(saveData) {
+
+    localStorage.setItem(
+        'C2C_LOAD_GAME',
+        'true'
+    );
+
+    this.closeSaveMenu();
+
+    if (
+        saveData.scene === 'SubwayTunnel1'
+    ) {
+
+        this.scene.start(
+            'SubwayTunnel1'
+        );
+
+    } else {
+
+        this.scene.start(
+            'Level1Scene'
+        );
+
+    }
+
+}
+
+closeSaveMenu() {
+
+    if (!this.saveMenuOpen) {
+        return;
+    }
+
+    this.saveMenuOpen = false;
+
+    if (this.saveOverlay) {
+        this.saveOverlay.destroy();
+    }
+
+    if (this.savePanel) {
+        this.savePanel.destroy();
+    }
+
+    if (this.saveTitle) {
+        this.saveTitle.destroy();
+    }
+
+    if (this.saveObjects) {
+
+        for (
+            const object
+            of this.saveObjects
+        ) {
+
+            object.destroy();
+
+        }
+
+    }
+
+    this.saveObjects = [];
+
+}
 
 }

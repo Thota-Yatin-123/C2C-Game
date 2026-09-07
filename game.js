@@ -17,7 +17,8 @@ const config = {
 
     scene: [
         HomeScene,
-        Level1Scene
+        Level1Scene,
+        SubwayTunnel1
     ]
 };
 
