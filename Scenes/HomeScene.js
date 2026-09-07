@@ -1429,7 +1429,17 @@ loadSaveGame(saveData) {
             'SubwayTunnel1'
         );
 
-    } else {
+    }
+    else if (
+        saveData.scene === 'Level2'
+    ) {
+
+        this.scene.start(
+            'Level2'
+        );
+
+    }
+    else {
 
         this.scene.start(
             'Level1Scene'

@@ -735,6 +735,70 @@ class Level2Scene extends Phaser.Scene {
 
         /*
          * =================================
+         * LOAD SAVED LEVEL 2 POSITION
+         * =================================
+         */
+
+        const loadGame =
+            localStorage.getItem(
+                'C2C_LOAD_GAME'
+            );
+
+        const saveFile =
+            localStorage.getItem(
+                'C2C_SAVE'
+            );
+
+
+        if (
+            loadGame === 'true' &&
+            saveFile
+        ) {
+
+            try {
+
+                const saveData =
+                    JSON.parse(
+                        saveFile
+                    );
+
+
+                /*
+                 * Restore Level 2 position
+                 */
+
+                if (
+                    saveData.level2 &&
+                    typeof saveData.level2.x === 'number' &&
+                    typeof saveData.level2.y === 'number'
+                ) {
+
+                    this.player.setPosition(
+                        saveData.level2.x,
+                        saveData.level2.y
+                    );
+
+                }
+
+            } catch (error) {
+
+                console.log(
+                    'Level 2 save load error:',
+                    error
+                );
+
+            }
+
+
+            localStorage.removeItem(
+                'C2C_LOAD_GAME'
+            );
+
+        }
+
+
+        /*
+         * =================================
          * SUBWAY INTERACTION
          * =================================
          */
@@ -866,6 +930,15 @@ class Level2Scene extends Phaser.Scene {
                     Phaser.Input.Keyboard.KeyCodes.D
 
             });
+
+
+        /*
+         * =================================
+         * SAVE TIMER
+         * =================================
+         */
+
+        this.saveTimer = 0;
 
     }
 
@@ -1074,14 +1147,16 @@ class Level2Scene extends Phaser.Scene {
 
         }
 
-        /*
- * =================================
- * INVERT CONTROLS
- * =================================
- */
 
-velocityX *= -1;
-velocityY *= -1;
+        /*
+         * =================================
+         * INVERT CONTROLS
+         * =================================
+         */
+
+        velocityX *= -1;
+        velocityY *= -1;
+
 
         /*
          * =================================
@@ -1351,6 +1426,192 @@ velocityY *= -1;
         this.flashlight.closePath();
 
         this.flashlight.fillPath();
+
+
+        /*
+         * =================================
+         * AUTO SAVE LEVEL 2 POSITION
+         * =================================
+         */
+
+        this.saveTimer =
+            (this.saveTimer || 0) +
+            this.game.loop.delta;
+
+
+        if (
+            this.saveTimer >= 1000
+        ) {
+
+            this.saveTimer = 0;
+
+
+            const existingSave =
+                localStorage.getItem(
+                    'C2C_SAVE'
+                );
+
+
+            let saveData = {
+
+                version: 1,
+
+                scene:
+                    'Level2',
+
+                completedKeys: [],
+
+                level1: null,
+
+                samole: null,
+
+                subway: null,
+
+                level2: {
+
+                    x:
+                        this.player.x,
+
+                    y:
+                        this.player.y
+
+                },
+
+                subwayUnlocked:
+                    true,
+
+                nauseaActivated:
+                    false,
+
+                updatedAt:
+                    Date.now()
+
+            };
+
+
+            /*
+             * =================================
+             * PRESERVE EXISTING SAVE DATA
+             * =================================
+             */
+
+            if (
+                existingSave
+            ) {
+
+                try {
+
+                    const oldSave =
+                        JSON.parse(
+                            existingSave
+                        );
+
+
+                    saveData =
+                        {
+
+                            ...saveData,
+
+                            ...oldSave,
+
+
+                            /*
+                             * Current scene
+                             */
+
+                            scene:
+                                'Level2',
+
+
+                            /*
+                             * Preserve Level 1
+                             * position
+                             */
+
+                            level1:
+                                oldSave.level1 ||
+                                null,
+
+
+                            /*
+                             * Preserve Subway
+                             * position
+                             */
+
+                            subway:
+                                oldSave.subway ||
+                                null,
+
+
+                            /*
+                             * Never save SAMOLE
+                             * position
+                             */
+
+                            samole:
+                                null,
+
+
+                            /*
+                             * Save current
+                             * Level 2 position
+                             */
+
+                            level2: {
+
+                                x:
+                                    this.player.x,
+
+                                y:
+                                    this.player.y
+
+                            },
+
+
+                            /*
+                             * Preserve subway
+                             * unlock state
+                             */
+
+                            subwayUnlocked:
+                                oldSave.subwayUnlocked ||
+                                true,
+
+
+                            /*
+                             * Preserve nausea
+                             * state
+                             */
+
+                            nauseaActivated:
+                                oldSave.nauseaActivated === true,
+
+
+                            updatedAt:
+                                Date.now()
+
+                        };
+
+                } catch (error) {
+
+                    console.log(
+                        'Level 2 save error:',
+                        error
+                    );
+
+                }
+
+            }
+
+
+            localStorage.setItem(
+                'C2C_SAVE',
+                JSON.stringify(
+                    saveData
+                )
+            );
+
+        }
 
     }
 
