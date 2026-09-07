@@ -4,12 +4,43 @@ class Level1Scene extends Phaser.Scene {
         super('Level1Scene');
     }
 
-    create() {
+create() {
 
-        this.sound.pauseOnBlur = false;
+    this.sound.pauseOnBlur = false;
 
-        const worldWidth = 2000;
-        const worldHeight = 1400;
+    /*
+     * =================================
+     * LEVEL 1 MUSIC
+     * =================================
+     */
+
+    const gameMusic = this.sound.get('gameMusic');
+
+    if (gameMusic) {
+
+        if (!gameMusic.isPlaying) {
+
+            gameMusic.play({
+                loop: true,
+                volume: 0.5
+            });
+
+        }
+
+    } else {
+
+        this.sound.play(
+            'gameMusic',
+            {
+                loop: true,
+                volume: 0.5
+            }
+        );
+
+    }
+
+    const worldWidth = 2000;
+    const worldHeight = 1400;
 
         this.physics.world.setBounds(
             0,
@@ -496,97 +527,7 @@ class Level1Scene extends Phaser.Scene {
             });
 
 
-            /*
-             * Independent flickering
-             */
-
-            this.time.addEvent({
-
-                delay:
-                    Phaser.Math.Between(
-                        150,
-                        500
-                    ),
-
-                loop: true,
-
-                callback: () => {
-
-                    const flicker =
-                        Math.random();
-
-
-                    /*
-                     * Rare complete blackout
-                     */
-
-                    if (flicker < 0.12) {
-
-                        lamp.setAlpha(0.05);
-
-                        glow.setAlpha(0.04);
-
-
-                        this.time.delayedCall(
-
-                            Phaser.Math.Between(
-                                100,
-                                300
-                            ),
-
-                            () => {
-
-                                lamp.setAlpha(1);
-
-                                glow.setAlpha(
-                                    Phaser.Math.FloatBetween(
-                                        0.60,
-                                        0.85
-                                    )
-                                );
-
-                            }
-
-                        );
-
-                    }
-
-
-                    /*
-                     * Normal flicker
-                     */
-
-                    else {
-
-                        const brightness =
-                            Phaser.Math.FloatBetween(
-                                0.70,
-                                1
-                            );
-
-                        const glowBrightness =
-                            Phaser.Math.FloatBetween(
-                                0.55,
-                                0.85
-                            );
-
-                        lamp.setAlpha(
-                            brightness
-                        );
-
-                        glow.setAlpha(
-                            glowBrightness
-                        );
-
-                    }
-
-                }
-
-            });
-
         }
-
-
         /*
          * =================================
          * TRASH CANS
@@ -865,8 +806,7 @@ if (
 
 }
 
-
-        /*
+/*
  * =================================
  * LOAD SAVE
  * =================================
@@ -905,13 +845,13 @@ if (
 
         }
 
-this.subwayUnlocked =
-    (
-        saveData.completedKeys &&
-        saveData.completedKeys.length >= 3
-    ) ||
-    saveData.subwayUnlocked ||
-    false;
+        this.subwayUnlocked =
+            (
+                saveData.completedKeys &&
+                saveData.completedKeys.length >= 3
+            ) ||
+            saveData.subwayUnlocked ||
+            false;
 
     } catch (error) {
 
@@ -927,6 +867,50 @@ this.subwayUnlocked =
     );
 
 }
+
+
+/*
+ * =================================
+ * LOAD GLOBAL NAUSEA STATE
+ * =================================
+ */
+
+this.nauseaActivated = false;
+
+const currentSave =
+    localStorage.getItem(
+        'C2C_SAVE'
+    );
+
+if (currentSave) {
+
+    try {
+
+        const saveData =
+            JSON.parse(
+                currentSave
+            );
+
+        this.nauseaActivated =
+            saveData.nauseaActivated === true;
+
+    } catch (error) {
+
+        console.log(
+            'Nausea state load error:',
+            error
+        );
+
+    }
+
+}
+
+
+/*
+ * =================================
+ * MOVEMENT KEYS
+ * =================================
+ */
         /*
          * =================================
          * MOVEMENT KEYS
@@ -1699,11 +1683,14 @@ if (
 
         samole: null,
 
-        subwayUnlocked:
-            this.subwayUnlocked || false,
+       subwayUnlocked:
+    this.subwayUnlocked || false,
 
-        updatedAt:
-            Date.now()
+nauseaActivated:
+    this.nauseaActivated || false,
+
+updatedAt:
+    Date.now()
 
     };
 
@@ -1728,13 +1715,18 @@ if (
                         y: this.player.y
                     },
 
-                    subwayUnlocked:
-                        this.subwayUnlocked ||
-                        oldSave.subwayUnlocked ||
-                        false,
+                   subwayUnlocked:
+    this.subwayUnlocked ||
+    oldSave.subwayUnlocked ||
+    false,
 
-                    updatedAt:
-                        Date.now()
+nauseaActivated:
+    this.nauseaActivated ||
+    oldSave.nauseaActivated ||
+    false,
+
+updatedAt:
+    Date.now()
                 };
 
         } catch (error) {
@@ -1783,7 +1775,7 @@ if (
         }
 
 
-        const speed = 100;
+        const speed = 500;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -1854,6 +1846,17 @@ if (
                 speed;
 
         }
+
+/*
+ * GLOBAL CONTROL INVERSION
+ */
+
+if (this.nauseaActivated) {
+
+    velocityX *= -1;
+    velocityY *= -1;
+
+}
 
 
         /*
@@ -2070,14 +2073,20 @@ if (
     )
 ) {
 
-            this.scene.start(
-                'SubwayTunnel1'
-            );
+    const gameMusic =
+        this.sound.get('gameMusic');
 
-            return;
+    if (gameMusic) {
+        gameMusic.stop();
+    }
 
-        }
+    this.scene.start(
+        'SubwayTunnel1'
+    );
 
+    return;
+
+}
 
         /*
          * DARKNESS

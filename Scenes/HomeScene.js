@@ -20,7 +20,11 @@ preload() {
         'gameMusic',
         'assets/GameAudio.wav'
     );
-
+    
+    this.load.audio(
+    'ghostLaugh',
+    'assets/GhostLaugh.wav'
+    );
 }
 
 create() {

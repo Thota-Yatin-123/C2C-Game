@@ -438,6 +438,15 @@ class SubwayTunnel1 extends Phaser.Scene {
 
         /*
          * =================================
+         * NAUSEA STATE
+         * =================================
+         */
+
+        this.nauseaActivated = false;
+
+
+        /*
+         * =================================
          * PLAYER
          * =================================
          */
@@ -478,6 +487,13 @@ class SubwayTunnel1 extends Phaser.Scene {
                 'C2C_SAVE'
             );
 
+
+        /*
+         * =================================
+         * LOAD SAVE 01 POSITION
+         * =================================
+         */
+
         if (
             loadGame === 'true' &&
             saveFile
@@ -515,6 +531,127 @@ class SubwayTunnel1 extends Phaser.Scene {
             localStorage.removeItem(
                 'C2C_LOAD_GAME'
             );
+
+        }
+
+
+        /*
+         * =================================
+         * RETURN FROM LEVEL 2
+         * =================================
+         */
+
+        const returnToSubway =
+            localStorage.getItem(
+                'C2C_RETURN_TO_SUBWAY'
+            );
+
+        if (
+            returnToSubway === 'true'
+        ) {
+
+            const returnSave =
+                localStorage.getItem(
+                    'C2C_SAVE'
+                );
+
+            if (returnSave) {
+
+                try {
+
+                    const saveData =
+                        JSON.parse(
+                            returnSave
+                        );
+
+                    if (
+                        saveData.subway &&
+                        typeof saveData.subway.x === 'number' &&
+                        typeof saveData.subway.y === 'number'
+                    ) {
+
+                        this.player.setPosition(
+                            saveData.subway.x,
+                            saveData.subway.y
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.log(
+                        'Return from Level 2 error:',
+                        error
+                    );
+
+                }
+
+            }
+
+            localStorage.removeItem(
+                'C2C_RETURN_TO_SUBWAY'
+            );
+
+        }
+
+
+        /*
+         * =================================
+         * LOAD GLOBAL NAUSEA STATE
+         * =================================
+         */
+
+        const currentSave =
+            localStorage.getItem(
+                'C2C_SAVE'
+            );
+
+        if (currentSave) {
+
+            try {
+
+                const saveData =
+                    JSON.parse(
+                        currentSave
+                    );
+
+                this.nauseaActivated =
+                    saveData.nauseaActivated === true;
+
+            } catch (error) {
+
+                console.log(
+                    'Nausea state load error:',
+                    error
+                );
+
+            }
+
+        }
+
+
+        /*
+         * =================================
+         * GHOST LAUGH
+         * =================================
+         */
+
+        this.ghostLaugh =
+            this.sound.add(
+                'ghostLaugh',
+                {
+                    loop: true,
+                    volume: 0.08,
+                    rate: 0.85,
+                    detune: -400
+                }
+            );
+
+        if (
+            !this.nauseaActivated
+        ) {
+
+            this.ghostLaugh.play();
 
         }
 
@@ -667,9 +804,29 @@ class SubwayTunnel1 extends Phaser.Scene {
          */
 
         this.controlsInverted = false;
+
         this.exitSequence = false;
 
         this.tunnelExited = false;
+
+
+        /*
+         * =================================
+         * RESTORE INVERTED CONTROLS
+         * =================================
+         */
+
+        if (
+            this.nauseaActivated
+        ) {
+
+            this.controlsInverted =
+                true;
+
+            this.tunnelExited =
+                true;
+
+        }
 
 
         /*
@@ -681,9 +838,9 @@ class SubwayTunnel1 extends Phaser.Scene {
         this.exitZone =
             this.add.rectangle(
                 worldWidth - 50,
-                650,
+                worldHeight / 2,
                 100,
-                300,
+                worldHeight,
                 0x000000,
                 0
             );
@@ -693,38 +850,49 @@ class SubwayTunnel1 extends Phaser.Scene {
             true
         );
 
-        this.physics.add.overlap(
-            this.player,
-            this.exitZone,
-            () => {
 
-                if (
-                    !this.exitSequence &&
-                    !this.tunnelExited
-                ) {
+        /*
+         * =================================
+         * LEFT WALL RETURN REGION
+         * =================================
+         */
 
-                    this.tunnelExited =
-                        true;
+        this.interactionZone =
+            this.add.rectangle(
+                0,
+                worldHeight / 2,
+                120,
+                worldHeight,
+                0xff0000,
+                0
+            );
 
-                    this.leaveTunnel();
-
-                }
-
-            }
+        this.physics.add.existing(
+            this.interactionZone,
+            true
         );
 
 
         /*
          * =================================
-         * LEVEL 1 RETURN INTERACTION
+         * RIGHT WALL INTERACTION REGION
          * =================================
-         *
-         * Same interaction system as
-         * Level1Scene.
          */
 
-        this.interactionX = 50;
-        this.interactionY = 650;
+        this.rightInteractionZone =
+            this.add.rectangle(
+                worldWidth,
+                worldHeight / 2,
+                120,
+                worldHeight,
+                0xff0000,
+                0
+            );
+
+        this.physics.add.existing(
+            this.rightInteractionZone,
+            true
+        );
 
 
         /*
@@ -841,8 +1009,89 @@ class SubwayTunnel1 extends Phaser.Scene {
 
     leaveTunnel() {
 
+        this.nauseaActivated = true;
+
+
         /*
-         * Stop movement
+         * =================================
+         * IMMEDIATE NAUSEA SAVE
+         * =================================
+         */
+
+        const existingSave =
+            localStorage.getItem(
+                'C2C_SAVE'
+            );
+
+        if (existingSave) {
+
+            try {
+
+                const saveData =
+                    JSON.parse(
+                        existingSave
+                    );
+
+                saveData.scene =
+                    'SubwayTunnel1';
+
+                saveData.nauseaActivated =
+                    true;
+
+                saveData.subway = {
+
+                    x:
+                        this.player.x,
+
+                    y:
+                        this.player.y
+
+                };
+
+
+                /*
+                 * Preserve Level 1 position
+                 */
+
+                saveData.level1 =
+                    saveData.level1 ||
+                    null;
+
+
+                /*
+                 * Never save SAMOLE
+                 * position
+                 */
+
+                saveData.samole =
+                    null;
+
+                saveData.updatedAt =
+                    Date.now();
+
+                localStorage.setItem(
+                    'C2C_SAVE',
+                    JSON.stringify(
+                        saveData
+                    )
+                );
+
+            } catch (error) {
+
+                console.log(
+                    'Immediate nausea save error:',
+                    error
+                );
+
+            }
+
+        }
+
+
+        /*
+         * =================================
+         * STOP MOVEMENT
+         * =================================
          */
 
         this.player.body.setVelocity(
@@ -855,6 +1104,21 @@ class SubwayTunnel1 extends Phaser.Scene {
 
         this.exitSequence =
             true;
+
+
+        /*
+         * =================================
+         * STOP GHOST LAUGH
+         * =================================
+         */
+
+        if (
+            this.ghostLaugh
+        ) {
+
+            this.ghostLaugh.stop();
+
+        }
 
 
         /*
@@ -1069,20 +1333,32 @@ class SubwayTunnel1 extends Phaser.Scene {
 
         /*
          * =================================
-         * LEVEL 1 RETURN INTERACTION
+         * LEFT RETURN REGION
          * =================================
          */
 
-        const distanceToLevel1 =
-            Phaser.Math.Distance.Between(
-                this.player.x,
-                this.player.y,
-                this.interactionX,
-                this.interactionY
-            );
-
         const canReturnToLevel1 =
-            distanceToLevel1 < 60;
+            this.player.x < 120;
+
+
+        /*
+         * =================================
+         * NAUSEA REGION
+         * =================================
+         */
+
+        const canEnterNauseaRegion =
+            this.player.x > 2000;
+
+
+        /*
+         * =================================
+         * RIGHT INTERACTION REGION
+         * =================================
+         */
+
+        const canInteractWithRightExit =
+            this.player.x > 2200;
 
 
         /*
@@ -1092,7 +1368,8 @@ class SubwayTunnel1 extends Phaser.Scene {
          */
 
         if (
-            canReturnToLevel1
+            canReturnToLevel1 ||
+            canInteractWithRightExit
         ) {
 
             this.interactionPrompt.setVisible(
@@ -1134,26 +1411,69 @@ class SubwayTunnel1 extends Phaser.Scene {
             )
         ) {
 
-            /*
-             * Tell Level 1 that we are
-             * returning from the subway.
-             */
+            if (
+                this.ghostLaugh
+            ) {
+
+                this.ghostLaugh.stop();
+
+            }
 
             localStorage.setItem(
                 'C2C_RETURN_FROM_SUBWAY',
                 'true'
             );
 
-
-            /*
-             * Start Level 1.
-             *
-             * Level 1 will restore the
-             * last saved Level 1 position.
-             */
-
             this.scene.start(
                 'Level1Scene'
+            );
+
+            return;
+
+        }
+
+
+        /*
+         * =================================
+         * AUTOMATIC NAUSEA
+         * =================================
+         */
+
+        if (
+            canEnterNauseaRegion &&
+            !this.nauseaActivated
+        ) {
+
+            this.tunnelExited =
+                true;
+
+            this.leaveTunnel();
+
+            return;
+
+        }
+
+
+        /*
+         * =================================
+         * PRESS E — RIGHT SIDE
+         * =================================
+         *
+         * This takes the player to Level 2.
+         *
+         * The Subway position is already
+         * saved by the autosave system.
+         */
+
+        if (
+            canInteractWithRightExit &&
+            Phaser.Input.Keyboard.JustDown(
+                this.interactKey
+            )
+        ) {
+
+            this.scene.start(
+                'Level2'
             );
 
             return;
@@ -1167,7 +1487,7 @@ class SubwayTunnel1 extends Phaser.Scene {
          * =================================
          */
 
-        const speed = 300;
+        const speed = 500;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -1314,12 +1634,20 @@ class SubwayTunnel1 extends Phaser.Scene {
                 samole: null,
 
                 subway: {
-                    x: this.player.x,
-                    y: this.player.y
+
+                    x:
+                        this.player.x,
+
+                    y:
+                        this.player.y
+
                 },
 
                 subwayUnlocked:
                     true,
+
+                nauseaActivated:
+                    this.nauseaActivated,
 
                 updatedAt:
                     Date.now()
@@ -1328,10 +1656,14 @@ class SubwayTunnel1 extends Phaser.Scene {
 
 
             /*
-             * Preserve existing save data
+             * =================================
+             * PRESERVE EXISTING SAVE DATA
+             * =================================
              */
 
-            if (existingSave) {
+            if (
+                existingSave
+            ) {
 
                 try {
 
@@ -1342,21 +1674,24 @@ class SubwayTunnel1 extends Phaser.Scene {
 
                     saveData =
                         {
+
                             ...saveData,
+
                             ...oldSave,
 
                             scene:
                                 'SubwayTunnel1',
 
+
                             /*
-                             * VERY IMPORTANT:
-                             * Keep the last Level 1
+                             * Keep Level 1
                              * position untouched.
                              */
 
                             level1:
                                 oldSave.level1 ||
                                 null,
+
 
                             /*
                              * Never save SAMOLE
@@ -1366,25 +1701,37 @@ class SubwayTunnel1 extends Phaser.Scene {
                             samole:
                                 null,
 
-                            /*
-                             * Save current tunnel
-                             * position.
 
+                            /*
+                             * Save current
+                             * Subway position.
                              */
 
                             subway: {
+
                                 x:
                                     this.player.x,
 
                                 y:
                                     this.player.y
+
                             },
+
 
                             subwayUnlocked:
                                 true,
 
+
+                            /*
+                             * Persist nausea.
+                             */
+
+                            nauseaActivated:
+                                this.nauseaActivated,
+
                             updatedAt:
                                 Date.now()
+
                         };
 
                 } catch (error) {
@@ -1401,7 +1748,9 @@ class SubwayTunnel1 extends Phaser.Scene {
 
             localStorage.setItem(
                 'C2C_SAVE',
-                JSON.stringify(saveData)
+                JSON.stringify(
+                    saveData
+                )
             );
 
         }
