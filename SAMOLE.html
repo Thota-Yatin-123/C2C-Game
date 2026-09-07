@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIT Vellore: Night Terror</title>
+
     <style>
         body {
             margin: 0;
@@ -11,6 +12,7 @@
             background-color: #000;
             font-family: 'Courier New', Courier, monospace;
             user-select: none;
+            cursor: none;
         }
 
         #canvas-container {
@@ -18,7 +20,6 @@
             height: 100vh;
         }
 
-        /* Creepy Vignette & Atmospheric Overlay */
         #vignette {
             position: absolute;
             top: 0;
@@ -26,7 +27,11 @@
             width: 100vw;
             height: 100vh;
             pointer-events: none;
-            background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.95) 90%);
+            background: radial-gradient(
+                circle,
+                transparent 40%,
+                rgba(0, 0, 0, 0.95) 90%
+            );
             z-index: 4;
         }
 
@@ -35,7 +40,9 @@
             top: 20px;
             left: 20px;
             color: #ff2222;
-            text-shadow: 0 0 10px #ff0000, 2px 2px 4px #000;
+            text-shadow:
+                0 0 10px #ff0000,
+                2px 2px 4px #000;
             font-weight: bold;
             font-size: 20px;
             pointer-events: none;
@@ -92,70 +99,22 @@
             pointer-events: none;
             z-index: 5;
         }
-
-        #screen-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(3, 3, 5, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            z-index: 10;
-        }
-
-        h1 {
-            color: #ff0000;
-            font-size: 48px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            text-shadow: 0 0 20px #ff0000;
-            text-align: center;
-        }
-
-        p {
-            font-size: 16px;
-            max-width: 580px;
-            text-align: center;
-            line-height: 1.6;
-            margin-bottom: 30px;
-            color: #bbb;
-        }
-
-        button {
-            background-color: #880000;
-            color: white;
-            border: 1px solid #ff3333;
-            padding: 14px 36px;
-            font-size: 18px;
-            font-family: inherit;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-        }
-
-        button:hover {
-            background-color: #ff0000;
-            box-shadow: 0 0 25px #ff0000;
-            transform: scale(1.05);
-        }
     </style>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
+
 <body>
 
     <div id="canvas-container"></div>
+
     <div id="vignette"></div>
+
     <div id="crosshair"></div>
-    
+
     <div id="ui">
-        KEYS COLLECTED: <span id="key-count">0</span> / 3
+        KEYS COLLECTED:
+        <span id="key-count">0</span> / 3
     </div>
 
     <div id="minimap-container">
@@ -163,568 +122,2016 @@
     </div>
 
     <div id="objective">
-        Search <span style="color:#ff8888">P Block</span>, <span style="color:#ff8888">Q Block</span> & <span style="color:#ff8888">N Block</span> for 3 Keys. Escape via Main Gate! [SHIFT to Sprint]
-    </div>
-
-    <div id="screen-overlay">
-        <h1 id="overlay-title">VIT: NIGHT TERROR</h1>
-        <p id="overlay-desc">You are trapped on the hostel campus after midnight. A terrifying entity haunts the shadows. Hold <b>SHIFT</b> to sprint fast, track locations on your radar, collect all 3 keys from <b>P Block</b>, <b>Q Block</b>, and <b>N Block</b>, and unlock the Main Gate to survive.</p>
-        <button id="start-btn">ENTER CAMPUS</button>
+        Search
+        <span style="color:#ff8888">P Block</span>,
+        <span style="color:#ff8888">Q Block</span> &
+        <span style="color:#ff8888">N Block</span>
+        for 3 Keys.
+        Escape via Main Gate!
+        [SHIFT to Sprint]
     </div>
 
     <script>
-        // --- Game Setup ---
+
+        // =========================================================
+        // GAME SETUP
+        // =========================================================
+
         let scene, camera, renderer;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
+
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let isSprinting = false;
+
         let prevTime = performance.now();
+
         const velocity = new THREE.Vector3();
         const direction = new THREE.Vector3();
 
-        let isLocked = false;
-        let pitchObject, yawObject;
+        let pitchObject;
+        let yawObject;
 
         let keysCollected = 0;
         const keysList = [];
-        let mainGate, ghost, torchMesh, ghostTexture;
+
+        let mainGate;
+        let ghost;
+        let torchMesh;
+        let ghostTexture;
+
         let gameOver = false;
 
-        let minimapCanvas, minimapCtx;
+        let minimapCanvas;
+        let minimapCtx;
 
-        const overlay = document.getElementById('screen-overlay');
-        const startBtn = document.getElementById('start-btn');
-        const keyCountUI = document.getElementById('key-count');
-        const overlayTitle = document.getElementById('overlay-title');
-        const overlayDesc = document.getElementById('overlay-desc');
+        const keyCountUI =
+            document.getElementById('key-count');
+
+
+        // =========================================================
+        // INITIALIZE IMMEDIATELY
+        // =========================================================
 
         init();
         animate();
 
-        function init() {
-            // Scene & Dark Atmospheric Fog
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020205);
-            scene.fog = new THREE.FogExp2(0x020205, 0.03);
 
-            // Camera & First-Person Rig Setup
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
-            pitchObject = new THREE.Object3D();
+        // =========================================================
+        // INITIALIZATION
+        // =========================================================
+
+        function init() {
+
+            // -----------------------------------------------------
+            // Scene
+            // -----------------------------------------------------
+
+            scene = new THREE.Scene();
+
+            scene.background =
+                new THREE.Color(0x020205);
+
+            scene.fog =
+                new THREE.FogExp2(
+                    0x020205,
+                    0.03
+                );
+
+
+            // -----------------------------------------------------
+            // Camera
+            // -----------------------------------------------------
+
+            camera =
+                new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth /
+                    window.innerHeight,
+                    0.1,
+                    1000
+                );
+
+
+            // -----------------------------------------------------
+            // First Person Rig
+            // -----------------------------------------------------
+
+            pitchObject =
+                new THREE.Object3D();
+
             pitchObject.add(camera);
-            yawObject = new THREE.Object3D();
-            yawObject.position.set(0, 1.7, 40); // Start near Main Gate
+
+
+            yawObject =
+                new THREE.Object3D();
+
+            yawObject.position.set(
+                0,
+                1.7,
+                40
+            );
+
             yawObject.add(pitchObject);
+
             scene.add(yawObject);
 
-            // Atmospheric Lighting (Creepy Ambient + Dynamic Spot Torch)
-            const ambientLight = new THREE.AmbientLight(0x080a15, 0.8);
+
+            // -----------------------------------------------------
+            // Ambient Lighting
+            // -----------------------------------------------------
+
+            const ambientLight =
+                new THREE.AmbientLight(
+                    0x080a15,
+                    0.8
+                );
+
             scene.add(ambientLight);
 
-            // Flashlight Beam
-            const flashlight = new THREE.SpotLight(0xfff0dd, 4.0, 60, Math.PI / 4.5, 0.4, 1.2);
-            flashlight.position.set(0, 0, 0);
-            camera.add(flashlight);
-            flashlight.target = camera;
 
-            // Player Handheld Torch
+            // -----------------------------------------------------
+            // Flashlight
+            // -----------------------------------------------------
+
+            const flashlight =
+                new THREE.SpotLight(
+                    0xfff0dd,
+                    4.0,
+                    60,
+                    Math.PI / 4.5,
+                    0.4,
+                    1.2
+                );
+
+            flashlight.position.set(
+                0,
+                0,
+                0
+            );
+
+            camera.add(flashlight);
+
+
+            const flashlightTarget =
+                new THREE.Object3D();
+
+            flashlightTarget.position.set(
+                0,
+                0,
+                -10
+            );
+
+            camera.add(flashlightTarget);
+
+            flashlight.target =
+                flashlightTarget;
+
+
+            // -----------------------------------------------------
+            // Player Torch
+            // -----------------------------------------------------
+
             create3DTorch();
 
-            // Ground Floor with Dark Reflective Texture
-            const floorGeo = new THREE.PlaneGeometry(350, 350);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x08080c, roughness: 0.8, metalness: 0.2 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
+
+            // -----------------------------------------------------
+            // Ground
+            // -----------------------------------------------------
+
+            const floorGeo =
+                new THREE.PlaneGeometry(
+                    350,
+                    350
+                );
+
+            const floorMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x08080c,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+
+            const floor =
+                new THREE.Mesh(
+                    floorGeo,
+                    floorMat
+                );
+
+            floor.rotation.x =
+                -Math.PI / 2;
+
             scene.add(floor);
 
-            // Minimap Initialization
-            minimapCanvas = document.getElementById('minimap');
-            minimapCtx = minimapCanvas.getContext('2d');
 
-            // World Generation
-            ghostTexture = createTerrifyingFaceTexture();
+            // -----------------------------------------------------
+            // Minimap
+            // -----------------------------------------------------
+
+            minimapCanvas =
+                document.getElementById(
+                    'minimap'
+                );
+
+            minimapCtx =
+                minimapCanvas.getContext(
+                    '2d'
+                );
+
+
+            // -----------------------------------------------------
+            // World
+            // -----------------------------------------------------
+
+            ghostTexture =
+                createTerrifyingFaceTexture();
+
             createBuildings();
+
             createMainGate();
+
             createKeys();
+
             createScaryGhost();
+
             createEnvironmentDetails();
 
-            // Renderer Setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 0.9;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // Controls & Listeners
-            startBtn.addEventListener('click', startGame);
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            window.addEventListener('resize', onWindowResize);
+            // -----------------------------------------------------
+            // Renderer
+            // -----------------------------------------------------
+
+            renderer =
+                new THREE.WebGLRenderer({
+                    antialias: true
+                });
+
+            renderer.setSize(
+                window.innerWidth,
+                window.innerHeight
+            );
+
+            renderer.setPixelRatio(
+                window.devicePixelRatio
+            );
+
+            renderer.toneMapping =
+                THREE.ACESFilmicToneMapping;
+
+            renderer.toneMappingExposure =
+                0.9;
+
+            document
+                .getElementById(
+                    'canvas-container'
+                )
+                .appendChild(
+                    renderer.domElement
+                );
+
+
+            // -----------------------------------------------------
+            // Controls
+            // -----------------------------------------------------
+
+            document.addEventListener(
+                'mousemove',
+                onMouseMove
+            );
+
+            document.addEventListener(
+                'keydown',
+                onKeyDown
+            );
+
+            document.addEventListener(
+                'keyup',
+                onKeyUp
+            );
+
+            window.addEventListener(
+                'resize',
+                onWindowResize
+            );
         }
 
-        // --- 3D Torch Model attached to Camera ---
-        function create3DTorch() {
-            torchMesh = new THREE.Group();
 
-            const handleGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.65, 12);
-            const handleMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
-            const handle = new THREE.Mesh(handleGeo, handleMat);
-            handle.rotation.x = Math.PI / 2;
+        // =========================================================
+        // 3D TORCH
+        // =========================================================
+
+        function create3DTorch() {
+
+            torchMesh =
+                new THREE.Group();
+
+
+            const handleGeo =
+                new THREE.CylinderGeometry(
+                    0.035,
+                    0.045,
+                    0.65,
+                    12
+                );
+
+            const handleMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x111111,
+                    roughness: 0.4
+                });
+
+            const handle =
+                new THREE.Mesh(
+                    handleGeo,
+                    handleMat
+                );
+
+            handle.rotation.x =
+                Math.PI / 2;
+
             torchMesh.add(handle);
 
-            const headGeo = new THREE.CylinderGeometry(0.075, 0.045, 0.2, 12);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.9, roughness: 0.2 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.rotation.x = Math.PI / 2;
-            head.position.z = -0.32;
+
+            const headGeo =
+                new THREE.CylinderGeometry(
+                    0.075,
+                    0.045,
+                    0.2,
+                    12
+                );
+
+            const headMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x444444,
+                    metalness: 0.9,
+                    roughness: 0.2
+                });
+
+            const head =
+                new THREE.Mesh(
+                    headGeo,
+                    headMat
+                );
+
+            head.rotation.x =
+                Math.PI / 2;
+
+            head.position.z =
+                -0.32;
+
             torchMesh.add(head);
 
-            const lensGeo = new THREE.SphereGeometry(0.06, 12, 12);
-            const lensMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
-            const lens = new THREE.Mesh(lensGeo, lensMat);
-            lens.position.z = -0.4;
+
+            const lensGeo =
+                new THREE.SphereGeometry(
+                    0.06,
+                    12,
+                    12
+                );
+
+            const lensMat =
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffee
+                });
+
+            const lens =
+                new THREE.Mesh(
+                    lensGeo,
+                    lensMat
+                );
+
+            lens.position.z =
+                -0.4;
+
             torchMesh.add(lens);
 
-            torchMesh.position.set(0.38, -0.28, -0.55);
+
+            torchMesh.position.set(
+                0.38,
+                -0.28,
+                -0.55
+            );
+
             camera.add(torchMesh);
         }
 
-        // --- Terrifying Demon Face Texture ---
-        function createTerrifyingFaceTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
 
-            ctx.fillStyle = '#020202';
-            ctx.fillRect(0, 0, 512, 512);
+        // =========================================================
+        // GHOST FACE TEXTURE
+        // =========================================================
+
+        function createTerrifyingFaceTexture() {
+
+            const canvas =
+                document.createElement(
+                    'canvas'
+                );
+
+            canvas.width = 512;
+            canvas.height = 512;
+
+            const ctx =
+                canvas.getContext('2d');
+
+
+            ctx.fillStyle =
+                '#020202';
+
+            ctx.fillRect(
+                0,
+                0,
+                512,
+                512
+            );
+
 
             // Blood veins / cracks
-            ctx.strokeStyle = '#330000';
+
+            ctx.strokeStyle =
+                '#330000';
+
             ctx.lineWidth = 3;
-            for(let i=0; i<15; i++) {
+
+            for (
+                let i = 0;
+                i < 15;
+                i++
+            ) {
+
                 ctx.beginPath();
-                ctx.moveTo(256, 256);
-                ctx.lineTo(Math.random()*512, Math.random()*512);
+
+                ctx.moveTo(
+                    256,
+                    256
+                );
+
+                ctx.lineTo(
+                    Math.random() * 512,
+                    Math.random() * 512
+                );
+
                 ctx.stroke();
             }
 
-            // Glowing Hollow Red Eyes
-            ctx.fillStyle = '#ff0000';
-            ctx.shadowColor = '#ff0000';
+
+            // Red eyes
+
+            ctx.fillStyle =
+                '#ff0000';
+
+            ctx.shadowColor =
+                '#ff0000';
+
             ctx.shadowBlur = 30;
-            ctx.beginPath(); ctx.arc(150, 180, 45, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(362, 180, 45, 0, Math.PI * 2); ctx.fill();
 
-            // Piercing Yellow Pupils
-            ctx.fillStyle = '#ffff00';
-            ctx.shadowBlur = 10;
-            ctx.beginPath(); ctx.arc(150, 180, 12, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(362, 180, 12, 0, Math.PI * 2); ctx.fill();
-
-            // Horrific Screaming Jaw
-            ctx.fillStyle = '#000000';
-            ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.ellipse(256, 350, 75, 110, 0, 0, Math.PI * 2);
+
+            ctx.arc(
+                150,
+                180,
+                45,
+                0,
+                Math.PI * 2
+            );
+
             ctx.fill();
 
-            // Sharp Needle Teeth
-            ctx.fillStyle = '#dddddd';
-            for (let i = 0; i < 12; i++) {
-                ctx.beginPath();
-                ctx.moveTo(186 + (i * 12), 250);
-                ctx.lineTo(192 + (i * 12), 295);
-                ctx.lineTo(198 + (i * 12), 250);
-                ctx.fill();
+
+            ctx.beginPath();
+
+            ctx.arc(
+                362,
+                180,
+                45,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            // Yellow pupils
+
+            ctx.fillStyle =
+                '#ffff00';
+
+            ctx.shadowBlur = 10;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                150,
+                180,
+                12,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            ctx.beginPath();
+
+            ctx.arc(
+                362,
+                180,
+                12,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            // Screaming jaw
+
+            ctx.fillStyle =
+                '#000000';
+
+            ctx.shadowBlur = 0;
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                256,
+                350,
+                75,
+                110,
+                0,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            // Teeth
+
+            ctx.fillStyle =
+                '#dddddd';
+
+            for (
+                let i = 0;
+                i < 12;
+                i++
+            ) {
 
                 ctx.beginPath();
-                ctx.moveTo(186 + (i * 12), 440);
-                ctx.lineTo(192 + (i * 12), 395);
-                ctx.lineTo(198 + (i * 12), 440);
+
+                ctx.moveTo(
+                    186 + (i * 12),
+                    250
+                );
+
+                ctx.lineTo(
+                    192 + (i * 12),
+                    295
+                );
+
+                ctx.lineTo(
+                    198 + (i * 12),
+                    250
+                );
+
+                ctx.fill();
+
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    186 + (i * 12),
+                    440
+                );
+
+                ctx.lineTo(
+                    192 + (i * 12),
+                    395
+                );
+
+                ctx.lineTo(
+                    198 + (i * 12),
+                    440
+                );
+
                 ctx.fill();
             }
 
-            return new THREE.CanvasTexture(canvas);
+
+            return new THREE.CanvasTexture(
+                canvas
+            );
         }
 
-        // --- Buildings Architecture (P Block, Q Block, N Block) ---
-        function createBuildingMesh(width, height, depth, color, x, z, labelText) {
-            const group = new THREE.Group();
-            
+
+        // =========================================================
+        // BUILDINGS
+        // =========================================================
+
+        function createBuildingMesh(
+            width,
+            height,
+            depth,
+            color,
+            x,
+            z,
+            labelText
+        ) {
+
+            const group =
+                new THREE.Group();
+
+
             // Main structure
-            const geo = new THREE.BoxGeometry(width, height, depth);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8, metalness: 0.1 });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.y = height / 2;
+
+            const geo =
+                new THREE.BoxGeometry(
+                    width,
+                    height,
+                    depth
+                );
+
+            const mat =
+                new THREE.MeshStandardMaterial({
+                    color: color,
+                    roughness: 0.8,
+                    metalness: 0.1
+                });
+
+            const mesh =
+                new THREE.Mesh(
+                    geo,
+                    mat
+                );
+
+            mesh.position.y =
+                height / 2;
+
             group.add(mesh);
 
-            // Atmospheric Glowing Windows
-            const winMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
-            for(let y=4; y<height-4; y+=6) {
-                for(let xOff=-width/2+4; xOff<width/2-4; xOff+=6) {
-                    const winGeo = new THREE.PlaneGeometry(2, 3);
-                    const win = new THREE.Mesh(winGeo, winMat);
-                    win.position.set(xOff, y, depth/2 + 0.1);
+
+            // Windows
+
+            const winMat =
+                new THREE.MeshBasicMaterial({
+                    color: 0xff3300
+                });
+
+            for (
+                let y = 4;
+                y < height - 4;
+                y += 6
+            ) {
+
+                for (
+                    let xOff = -width / 2 + 4;
+                    xOff < width / 2 - 4;
+                    xOff += 6
+                ) {
+
+                    const winGeo =
+                        new THREE.PlaneGeometry(
+                            2,
+                            3
+                        );
+
+                    const win =
+                        new THREE.Mesh(
+                            winGeo,
+                            winMat
+                        );
+
+                    win.position.set(
+                        xOff,
+                        y,
+                        depth / 2 + 0.1
+                    );
+
                     group.add(win);
                 }
             }
 
-            // Glowing Signboard
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 512; canvas.height = 128;
-            ctx.fillStyle = '#050508'; ctx.fillRect(0,0,512,128);
-            ctx.fillStyle = '#ff1111'; ctx.font = 'Bold 36px Courier New';
-            ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10;
-            ctx.textAlign = 'center'; ctx.fillText(labelText, 256, 75);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            const labelGeo = new THREE.PlaneGeometry(18, 4.5);
-            const labelMat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-            const labelMesh = new THREE.Mesh(labelGeo, labelMat);
-            labelMesh.position.set(0, height + 3, 0);
+
+            // Signboard
+
+            const canvas =
+                document.createElement(
+                    'canvas'
+                );
+
+            const ctx =
+                canvas.getContext('2d');
+
+            canvas.width = 512;
+            canvas.height = 128;
+
+            ctx.fillStyle =
+                '#050508';
+
+            ctx.fillRect(
+                0,
+                0,
+                512,
+                128
+            );
+
+            ctx.fillStyle =
+                '#ff1111';
+
+            ctx.font =
+                'Bold 36px Courier New';
+
+            ctx.shadowColor =
+                '#ff0000';
+
+            ctx.shadowBlur = 10;
+
+            ctx.textAlign =
+                'center';
+
+            ctx.fillText(
+                labelText,
+                256,
+                75
+            );
+
+
+            const texture =
+                new THREE.CanvasTexture(
+                    canvas
+                );
+
+
+            const labelGeo =
+                new THREE.PlaneGeometry(
+                    18,
+                    4.5
+                );
+
+
+            const labelMat =
+                new THREE.MeshBasicMaterial({
+                    map: texture,
+                    side: THREE.DoubleSide
+                });
+
+
+            const labelMesh =
+                new THREE.Mesh(
+                    labelGeo,
+                    labelMat
+                );
+
+
+            labelMesh.position.set(
+                0,
+                height + 3,
+                0
+            );
+
             group.add(labelMesh);
 
-            // Red Beacon Warning Light
-            const light = new THREE.PointLight(0xff0000, 2.0, 25);
-            light.position.set(0, height + 1, depth/2 + 2);
+
+            // Beacon
+
+            const light =
+                new THREE.PointLight(
+                    0xff0000,
+                    2.0,
+                    25
+                );
+
+            light.position.set(
+                0,
+                height + 1,
+                depth / 2 + 2
+            );
+
             group.add(light);
 
-            group.position.set(x, 0, z);
+
+            group.position.set(
+                x,
+                0,
+                z
+            );
+
             scene.add(group);
         }
 
+
         function createBuildings() {
-            createBuildingMesh(32, 28, 28, 0x1f1525, -65, -60, "P BLOCK HOSTEL");
-            createBuildingMesh(32, 28, 28, 0x121b24, 65, -60, "Q BLOCK HOSTEL");
-            createBuildingMesh(38, 28, 28, 0x16221f, 0, -115, "N BLOCK HOSTEL");
+
+            createBuildingMesh(
+                32,
+                28,
+                28,
+                0x1f1525,
+                -65,
+                -60,
+                "P BLOCK HOSTEL"
+            );
+
+
+            createBuildingMesh(
+                32,
+                28,
+                28,
+                0x121b24,
+                65,
+                -60,
+                "Q BLOCK HOSTEL"
+            );
+
+
+            createBuildingMesh(
+                38,
+                28,
+                28,
+                0x16221f,
+                0,
+                -115,
+                "N BLOCK HOSTEL"
+            );
         }
 
+
+        // =========================================================
+        // MAIN GATE
+        // =========================================================
+
         function createMainGate() {
-            mainGate = new THREE.Group();
-            
-            const pillarGeo = new THREE.BoxGeometry(4, 14, 4);
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-            
-            const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
-            leftPillar.position.set(-11, 7, 0);
-            const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
-            rightPillar.position.set(11, 7, 0);
 
-            const barGeo = new THREE.BoxGeometry(20, 9, 0.5);
-            const barMat = new THREE.MeshStandardMaterial({ color: 0x550000, roughness: 0.2 });
-            const gateBars = new THREE.Mesh(barGeo, barMat);
-            gateBars.position.set(0, 5.5, 0);
+            mainGate =
+                new THREE.Group();
 
-            // Gate Spotlight
-            const gateLight = new THREE.PointLight(0x00ffcc, 1.5, 20);
-            gateLight.position.set(0, 12, 0);
-            mainGate.add(gateLight);
 
-            mainGate.add(leftPillar);
-            mainGate.add(rightPillar);
-            mainGate.add(gateBars);
+            const pillarGeo =
+                new THREE.BoxGeometry(
+                    4,
+                    14,
+                    4
+                );
 
-            mainGate.position.set(0, 0, 55);
+
+            const pillarMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x1a1a1a
+                });
+
+
+            const leftPillar =
+                new THREE.Mesh(
+                    pillarGeo,
+                    pillarMat
+                );
+
+            leftPillar.position.set(
+                -11,
+                7,
+                0
+            );
+
+
+            const rightPillar =
+                new THREE.Mesh(
+                    pillarGeo,
+                    pillarMat
+                );
+
+            rightPillar.position.set(
+                11,
+                7,
+                0
+            );
+
+
+            const barGeo =
+                new THREE.BoxGeometry(
+                    20,
+                    9,
+                    0.5
+                );
+
+
+            const barMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x550000,
+                    roughness: 0.2
+                });
+
+
+            const gateBars =
+                new THREE.Mesh(
+                    barGeo,
+                    barMat
+                );
+
+
+            gateBars.position.set(
+                0,
+                5.5,
+                0
+            );
+
+
+            const gateLight =
+                new THREE.PointLight(
+                    0x00ffcc,
+                    1.5,
+                    20
+                );
+
+
+            gateLight.position.set(
+                0,
+                12,
+                0
+            );
+
+
+            mainGate.add(
+                gateLight
+            );
+
+            mainGate.add(
+                leftPillar
+            );
+
+            mainGate.add(
+                rightPillar
+            );
+
+            mainGate.add(
+                gateBars
+            );
+
+
+            mainGate.position.set(
+                0,
+                0,
+                55
+            );
+
             scene.add(mainGate);
         }
 
+
+        // =========================================================
+        // KEYS
+        // =========================================================
+
         function createKeys() {
-            const keyGeo = new THREE.TorusGeometry(0.6, 0.15, 8, 16);
-            const keyMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+            const keyGeo =
+                new THREE.TorusGeometry(
+                    0.6,
+                    0.15,
+                    8,
+                    16
+                );
+
+
+            const keyMat =
+                new THREE.MeshBasicMaterial({
+                    color: 0xffff00
+                });
+
 
             const locations = [
-                { x: -65, z: -42 }, // P Block Front
-                { x: 65, z: -42 },  // Q Block Front
-                { x: 0, z: -96 }    // N Block Front
+
+                {
+                    x: -65,
+                    z: -42
+                },
+
+                {
+                    x: 65,
+                    z: -42
+                },
+
+                {
+                    x: 0,
+                    z: -96
+                }
+
             ];
 
-            locations.forEach((pos) => {
-                const keyGroup = new THREE.Group();
-                const key = new THREE.Mesh(keyGeo, keyMat);
-                keyGroup.add(key);
-                
-                const keyLight = new THREE.PointLight(0xffff00, 2.5, 12);
-                keyGroup.add(keyLight);
 
-                keyGroup.position.set(pos.x, 1.3, pos.z);
-                scene.add(keyGroup);
-                keysList.push(keyGroup);
-            });
+            locations.forEach(
+                (pos) => {
+
+                    const keyGroup =
+                        new THREE.Group();
+
+
+                    const key =
+                        new THREE.Mesh(
+                            keyGeo,
+                            keyMat
+                        );
+
+
+                    keyGroup.add(
+                        key
+                    );
+
+
+                    const keyLight =
+                        new THREE.PointLight(
+                            0xffff00,
+                            2.5,
+                            12
+                        );
+
+
+                    keyGroup.add(
+                        keyLight
+                    );
+
+
+                    keyGroup.position.set(
+                        pos.x,
+                        1.3,
+                        pos.z
+                    );
+
+
+                    scene.add(
+                        keyGroup
+                    );
+
+
+                    keysList.push(
+                        keyGroup
+                    );
+                }
+            );
         }
 
-        // --- Scary Floating Ghost Entity ---
+
+        // =========================================================
+        // GHOST
+        // =========================================================
+
         function createScaryGhost() {
-            ghost = new THREE.Group();
 
-            // Terrifying Head
-            const headGeo = new THREE.BoxGeometry(2.2, 2.6, 2.2);
-            const headMat = new THREE.MeshBasicMaterial({ map: ghostTexture });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 3.5;
-            ghost.add(head);
+            ghost =
+                new THREE.Group();
 
-            // Ragged Shadow Body
-            const bodyGeo = new THREE.ConeGeometry(1.8, 5, 8);
-            const bodyMat = new THREE.MeshStandardMaterial({ 
-                color: 0x030303, 
-                roughness: 0.9, 
-                wireframe: true 
-            });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 1.6;
-            body.rotation.x = Math.PI;
-            ghost.add(body);
 
-            // Long Claws
-            const armGeo = new THREE.BoxGeometry(0.2, 3.2, 0.2);
-            const armMat = new THREE.MeshBasicMaterial({ color: 0x080808 });
-            
-            const leftArm = new THREE.Mesh(armGeo, armMat);
-            leftArm.position.set(-1.4, 2.2, 0.6);
-            leftArm.rotation.x = -Math.PI / 3.5;
-            
-            const rightArm = new THREE.Mesh(armGeo, armMat);
-            rightArm.position.set(1.4, 2.2, 0.6);
-            rightArm.rotation.x = -Math.PI / 3.5;
+            // Head
 
-            ghost.add(leftArm);
-            ghost.add(rightArm);
+            const headGeo =
+                new THREE.BoxGeometry(
+                    2.2,
+                    2.6,
+                    2.2
+                );
 
-            // Red Evil Aura
-            const ghostLight = new THREE.PointLight(0xff0000, 3.0, 18);
-            ghostLight.position.y = 3.0;
-            ghost.add(ghostLight);
 
-            ghost.position.set(0, 0, -50);
-            scene.add(ghost);
+            const headMat =
+                new THREE.MeshBasicMaterial({
+                    map: ghostTexture
+                });
+
+
+            const head =
+                new THREE.Mesh(
+                    headGeo,
+                    headMat
+                );
+
+
+            head.position.y =
+                3.5;
+
+
+            ghost.add(
+                head
+            );
+
+
+            // Body
+
+            const bodyGeo =
+                new THREE.ConeGeometry(
+                    1.8,
+                    5,
+                    8
+                );
+
+
+            const bodyMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x030303,
+                    roughness: 0.9,
+                    wireframe: true
+                });
+
+
+            const body =
+                new THREE.Mesh(
+                    bodyGeo,
+                    bodyMat
+                );
+
+
+            body.position.y =
+                1.6;
+
+            body.rotation.x =
+                Math.PI;
+
+
+            ghost.add(
+                body
+            );
+
+
+            // Arms
+
+            const armGeo =
+                new THREE.BoxGeometry(
+                    0.2,
+                    3.2,
+                    0.2
+                );
+
+
+            const armMat =
+                new THREE.MeshBasicMaterial({
+                    color: 0x080808
+                });
+
+
+            const leftArm =
+                new THREE.Mesh(
+                    armGeo,
+                    armMat
+                );
+
+
+            leftArm.position.set(
+                -1.4,
+                2.2,
+                0.6
+            );
+
+
+            leftArm.rotation.x =
+                -Math.PI / 3.5;
+
+
+            const rightArm =
+                new THREE.Mesh(
+                    armGeo,
+                    armMat
+                );
+
+
+            rightArm.position.set(
+                1.4,
+                2.2,
+                0.6
+            );
+
+
+            rightArm.rotation.x =
+                -Math.PI / 3.5;
+
+
+            ghost.add(
+                leftArm
+            );
+
+            ghost.add(
+                rightArm
+            );
+
+
+            // Aura
+
+            const ghostLight =
+                new THREE.PointLight(
+                    0xff0000,
+                    3.0,
+                    18
+                );
+
+
+            ghostLight.position.y =
+                3.0;
+
+
+            ghost.add(
+                ghostLight
+            );
+
+
+            ghost.position.set(
+                0,
+                0,
+                -50
+            );
+
+
+            scene.add(
+                ghost
+            );
         }
 
-        // Atmospheric Street Lamps
+
+        // =========================================================
+        // ENVIRONMENT
+        // =========================================================
+
         function createEnvironmentDetails() {
+
             const lampPositions = [
-                { x: -25, z: 10 }, { x: 25, z: 10 },
-                { x: -25, z: -30 }, { x: 25, z: -30 },
-                { x: -25, z: -80 }, { x: 25, z: -80 }
+
+                {
+                    x: -25,
+                    z: 10
+                },
+
+                {
+                    x: 25,
+                    z: 10
+                },
+
+                {
+                    x: -25,
+                    z: -30
+                },
+
+                {
+                    x: 25,
+                    z: -30
+                },
+
+                {
+                    x: -25,
+                    z: -80
+                },
+
+                {
+                    x: 25,
+                    z: -80
+                }
+
             ];
 
-            lampPositions.forEach(pos => {
-                const pole = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.2, 0.2, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x111111 })
-                );
-                pole.position.set(pos.x, 4, pos.z);
 
-                const bulb = new THREE.PointLight(0xffaa33, 0.8, 18);
-                bulb.position.set(pos.x, 7.8, pos.z);
+            lampPositions.forEach(
+                pos => {
 
-                scene.add(pole);
-                scene.add(bulb);
-            });
+                    const pole =
+                        new THREE.Mesh(
+                            new THREE.CylinderGeometry(
+                                0.2,
+                                0.2,
+                                8
+                            ),
+
+                            new THREE.MeshStandardMaterial({
+                                color: 0x111111
+                            })
+                        );
+
+
+                    pole.position.set(
+                        pos.x,
+                        4,
+                        pos.z
+                    );
+
+
+                    const bulb =
+                        new THREE.PointLight(
+                            0xffaa33,
+                            0.8,
+                            18
+                        );
+
+
+                    bulb.position.set(
+                        pos.x,
+                        7.8,
+                        pos.z
+                    );
+
+
+                    scene.add(
+                        pole
+                    );
+
+                    scene.add(
+                        bulb
+                    );
+                }
+            );
         }
 
-        // --- Minimap Radar Renderer ---
+
+        // =========================================================
+        // MINIMAP
+        // =========================================================
+
         function drawMinimap() {
-            minimapCtx.clearRect(0, 0, 170, 170);
+
+            minimapCtx.clearRect(
+                0,
+                0,
+                170,
+                170
+            );
+
 
             const scale = 0.48;
+
             const mapCenterX = 85;
             const mapCenterY = 85;
 
-            const px = yawObject.position.x;
-            const pz = yawObject.position.z;
 
-            // Draw Buildings
-            minimapCtx.fillStyle = '#223344';
-            // P Block (-65, -60)
-            minimapCtx.fillRect(mapCenterX + (-65 - px) * scale - 8, mapCenterY + (-60 - pz) * scale - 7, 16, 14);
-            // Q Block (65, -60)
-            minimapCtx.fillRect(mapCenterX + (65 - px) * scale - 8, mapCenterY + (-60 - pz) * scale - 7, 16, 14);
-            // N Block (0, -115)
-            minimapCtx.fillRect(mapCenterX + (0 - px) * scale - 9, mapCenterY + (-115 - pz) * scale - 7, 18, 14);
-            
-            // Draw Main Gate Exit (0, 55)
-            minimapCtx.fillStyle = '#00ffcc';
-            minimapCtx.fillRect(mapCenterX + (0 - px) * scale - 8, mapCenterY + (55 - pz) * scale - 2, 16, 4);
+            const px =
+                yawObject.position.x;
 
-            // Draw Keys
-            minimapCtx.fillStyle = '#ffff00';
-            keysList.forEach(key => {
-                if (key.visible) {
-                    const kx = mapCenterX + (key.position.x - px) * scale;
-                    const ky = mapCenterY + (key.position.z - pz) * scale;
-                    minimapCtx.beginPath();
-                    minimapCtx.arc(kx, ky, 3.5, 0, Math.PI * 2);
-                    minimapCtx.fill();
+            const pz =
+                yawObject.position.z;
+
+
+            // Buildings
+
+            minimapCtx.fillStyle =
+                '#223344';
+
+
+            minimapCtx.fillRect(
+                mapCenterX +
+                (-65 - px) * scale - 8,
+
+                mapCenterY +
+                (-60 - pz) * scale - 7,
+
+                16,
+                14
+            );
+
+
+            minimapCtx.fillRect(
+                mapCenterX +
+                (65 - px) * scale - 8,
+
+                mapCenterY +
+                (-60 - pz) * scale - 7,
+
+                16,
+                14
+            );
+
+
+            minimapCtx.fillRect(
+                mapCenterX +
+                (0 - px) * scale - 9,
+
+                mapCenterY +
+                (-115 - pz) * scale - 7,
+
+                18,
+                14
+            );
+
+
+            // Main Gate
+
+            minimapCtx.fillStyle =
+                '#00ffcc';
+
+
+            minimapCtx.fillRect(
+                mapCenterX +
+                (0 - px) * scale - 8,
+
+                mapCenterY +
+                (55 - pz) * scale - 2,
+
+                16,
+                4
+            );
+
+
+            // Keys
+
+            minimapCtx.fillStyle =
+                '#ffff00';
+
+
+            keysList.forEach(
+                key => {
+
+                    if (
+                        key.visible
+                    ) {
+
+                        const kx =
+                            mapCenterX +
+                            (
+                                key.position.x -
+                                px
+                            ) * scale;
+
+
+                        const ky =
+                            mapCenterY +
+                            (
+                                key.position.z -
+                                pz
+                            ) * scale;
+
+
+                        minimapCtx.beginPath();
+
+                        minimapCtx.arc(
+                            kx,
+                            ky,
+                            3.5,
+                            0,
+                            Math.PI * 2
+                        );
+
+                        minimapCtx.fill();
+                    }
                 }
-            });
+            );
 
-            // Draw Flashing Ghost Blip
-            minimapCtx.fillStyle = (Math.floor(Date.now() / 200) % 2 === 0) ? '#ff0000' : '#660000';
-            const gx = mapCenterX + (ghost.position.x - px) * scale;
-            const gy = mapCenterY + (ghost.position.z - pz) * scale;
+
+            // Ghost
+
+            minimapCtx.fillStyle =
+                (
+                    Math.floor(
+                        Date.now() / 200
+                    ) % 2 === 0
+                )
+                    ? '#ff0000'
+                    : '#660000';
+
+
+            const gx =
+                mapCenterX +
+                (
+                    ghost.position.x -
+                    px
+                ) * scale;
+
+
+            const gy =
+                mapCenterY +
+                (
+                    ghost.position.z -
+                    pz
+                ) * scale;
+
+
             minimapCtx.beginPath();
-            minimapCtx.arc(gx, gy, 4.5, 0, Math.PI * 2);
+
+            minimapCtx.arc(
+                gx,
+                gy,
+                4.5,
+                0,
+                Math.PI * 2
+            );
+
             minimapCtx.fill();
 
-            // Draw Player Icon (Center Dot)
-            minimapCtx.fillStyle = '#ffffff';
+
+            // Player
+
+            minimapCtx.fillStyle =
+                '#ffffff';
+
+
             minimapCtx.beginPath();
-            minimapCtx.arc(mapCenterX, mapCenterY, 3.5, 0, Math.PI * 2);
+
+            minimapCtx.arc(
+                mapCenterX,
+                mapCenterY,
+                3.5,
+                0,
+                Math.PI * 2
+            );
+
             minimapCtx.fill();
         }
 
-        // --- Input Controls ---
-        function startGame() {
-            overlay.style.display = 'none';
-            document.body.requestPointerLock();
-        }
 
-        document.addEventListener('pointerlockchange', () => {
-            isLocked = (document.pointerLockElement === document.body);
-            if (!isLocked && !gameOver) {
-                overlay.style.display = 'flex';
-                overlayTitle.innerText = "GAME PAUSED";
-                overlayDesc.innerText = "Click below to resume your escape.";
-                startBtn.innerText = "RESUME";
-            }
-        });
+        // =========================================================
+        // MOUSE LOOK
+        // =========================================================
 
         function onMouseMove(event) {
-            if (!isLocked) return;
 
-            const movementX = event.movementX || 0;
-            const movementY = event.movementY || 0;
+            if (gameOver) {
+                return;
+            }
 
-            yawObject.rotation.y -= movementX * 0.0025;
-            pitchObject.rotation.x -= movementY * 0.0025;
 
-            pitchObject.rotation.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, pitchObject.rotation.x));
+            const movementX =
+                event.movementX ||
+                event.mozMovementX ||
+                event.webkitMovementX ||
+                0;
+
+
+            const movementY =
+                event.movementY ||
+                event.mozMovementY ||
+                event.webkitMovementY ||
+                0;
+
+
+            yawObject.rotation.y -=
+                movementX * 0.0025;
+
+
+            pitchObject.rotation.x -=
+                movementY * 0.0025;
+
+
+            pitchObject.rotation.x =
+                Math.max(
+                    -Math.PI / 2.5,
+                    Math.min(
+                        Math.PI / 2.5,
+                        pitchObject.rotation.x
+                    )
+                );
         }
+
+
+        // =========================================================
+        // KEYBOARD INPUT
+        // =========================================================
 
         function onKeyDown(event) {
+
             switch (event.code) {
-                case 'KeyW': case 'ArrowUp': moveForward = true; break;
-                case 'KeyA': case 'ArrowLeft': moveLeft = true; break;
-                case 'KeyS': case 'ArrowDown': moveBackward = true; break;
-                case 'KeyD': case 'ArrowRight': moveRight = true; break;
-                case 'ShiftLeft': case 'ShiftRight': isSprinting = true; break;
+
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = true;
+                    break;
+
+
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = true;
+                    break;
+
+
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = true;
+                    break;
+
+
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = true;
+                    break;
+
+
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    isSprinting = true;
+                    break;
             }
         }
+
 
         function onKeyUp(event) {
+
             switch (event.code) {
-                case 'KeyW': case 'ArrowUp': moveForward = false; break;
-                case 'KeyA': case 'ArrowLeft': moveLeft = false; break;
-                case 'KeyS': case 'ArrowDown': moveBackward = false; break;
-                case 'KeyD': case 'ArrowRight': moveRight = false; break;
-                case 'ShiftLeft': case 'ShiftRight': isSprinting = false; break;
+
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = false;
+                    break;
+
+
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = false;
+                    break;
+
+
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = false;
+                    break;
+
+
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = false;
+                    break;
+
+
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    isSprinting = false;
+                    break;
             }
         }
 
+
+        // =========================================================
+        // WINDOW RESIZE
+        // =========================================================
+
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+
+            camera.aspect =
+                window.innerWidth /
+                window.innerHeight;
+
+
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+
+
+            renderer.setSize(
+                window.innerWidth,
+                window.innerHeight
+            );
         }
 
-        // --- Main Game Loop ---
-        function animate() {
-            requestAnimationFrame(animate);
 
-            const time = performance.now();
-            const delta = (time - prevTime) / 1000;
+        // =========================================================
+        // GAME LOOP
+        // =========================================================
+
+        function animate() {
+
+            requestAnimationFrame(
+                animate
+            );
+
+
+            const time =
+                performance.now();
+
+
+            const delta =
+                (time - prevTime) /
+                1000;
+
+
             prevTime = time;
 
-            if (isLocked && !gameOver) {
-                velocity.x -= velocity.x * 12.0 * delta;
-                velocity.z -= velocity.z * 12.0 * delta;
 
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
+            if (!gameOver) {
+
+                // -------------------------------------------------
+                // Movement
+                // -------------------------------------------------
+
+                velocity.x -=
+                    velocity.x *
+                    12.0 *
+                    delta;
+
+
+                velocity.z -=
+                    velocity.z *
+                    12.0 *
+                    delta;
+
+
+                direction.z =
+                    Number(moveForward) -
+                    Number(moveBackward);
+
+
+                direction.x =
+                    Number(moveRight) -
+                    Number(moveLeft);
+
+
                 direction.normalize();
 
-                // High Player Speed (Walk: 120, Sprint: 185) -> Significantly FASTER than Ghost
-                const baseSpeed = isSprinting ? 185.0 : 120.0;
-                if (moveForward || moveBackward) velocity.z -= direction.z * baseSpeed * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * baseSpeed * delta;
 
-                yawObject.translateX(-velocity.x * delta);
-                yawObject.translateZ(velocity.z * delta);
+                const baseSpeed =
+                    isSprinting
+                        ? 185.0
+                        : 120.0;
 
-                yawObject.position.y = 1.7;
-                yawObject.position.x = Math.max(-140, Math.min(140, yawObject.position.x));
-                yawObject.position.z = Math.max(-140, Math.min(140, yawObject.position.z));
 
-                // Torch Swaying
-                if (moveForward || moveBackward || moveLeft || moveRight) {
-                    const bobSpeed = isSprinting ? 18 : 12;
-                    torchMesh.position.y = -0.28 + Math.sin(time * 0.001 * bobSpeed) * 0.025;
-                    torchMesh.position.x = 0.38 + Math.cos(time * 0.001 * (bobSpeed / 2)) * 0.02;
+                if (
+                    moveForward ||
+                    moveBackward
+                ) {
+
+                    velocity.z -=
+                        direction.z *
+                        baseSpeed *
+                        delta;
                 }
 
-                // Key Pickup Detection
-                keysList.forEach((keyGroup) => {
-                    if (keyGroup.visible) {
-                        keyGroup.rotation.y += 2.5 * delta;
-                        
-                        const dist = yawObject.position.distanceTo(keyGroup.position);
-                        if (dist < 3.2) {
-                            keyGroup.visible = false;
+
+                if (
+                    moveLeft ||
+                    moveRight
+                ) {
+
+                    velocity.x -=
+                        direction.x *
+                        baseSpeed *
+                        delta;
+                }
+
+
+                yawObject.translateX(
+                    -velocity.x * delta
+                );
+
+
+                yawObject.translateZ(
+                    velocity.z * delta
+                );
+
+
+                yawObject.position.y =
+                    1.7;
+
+
+                yawObject.position.x =
+                    Math.max(
+                        -140,
+                        Math.min(
+                            140,
+                            yawObject.position.x
+                        )
+                    );
+
+
+                yawObject.position.z =
+                    Math.max(
+                        -140,
+                        Math.min(
+                            140,
+                            yawObject.position.z
+                        )
+                    );
+
+
+                // -------------------------------------------------
+                // Torch Sway
+                // -------------------------------------------------
+
+                if (
+                    moveForward ||
+                    moveBackward ||
+                    moveLeft ||
+                    moveRight
+                ) {
+
+                    const bobSpeed =
+                        isSprinting
+                            ? 18
+                            : 12;
+
+
+                    torchMesh.position.y =
+                        -0.28 +
+                        Math.sin(
+                            time *
+                            0.001 *
+                            bobSpeed
+                        ) *
+                        0.025;
+
+
+                    torchMesh.position.x =
+                        0.38 +
+                        Math.cos(
+                            time *
+                            0.001 *
+                            (bobSpeed / 2)
+                        ) *
+                        0.02;
+                }
+
+
+                // -------------------------------------------------
+                // Key Pickup
+                // -------------------------------------------------
+
+                keysList.forEach(
+                    keyGroup => {
+
+                        if (
+                            !keyGroup.visible
+                        ) {
+                            return;
+                        }
+
+
+                        keyGroup.rotation.y +=
+                            2.5 *
+                            delta;
+
+
+                        const dist =
+                            yawObject.position
+                                .distanceTo(
+                                    keyGroup.position
+                                );
+
+
+                        if (
+                            dist < 3.2
+                        ) {
+
+                            keyGroup.visible =
+                                false;
+
+
                             keysCollected++;
-                            keyCountUI.innerText = keysCollected;
+
+
+                            keyCountUI.innerText =
+                                keysCollected;
+
+
+                            // -------------------------------------
+                            // Tell Level 1 that all keys are found
+                            // -------------------------------------
+
+                            if (
+                                keysCollected === 3
+                            ) {
+
+                                window.parent.postMessage(
+                                    {
+                                        type:
+                                            'SAMOLE_KEYS_COLLECTED'
+                                    },
+                                    '*'
+                                );
+                            }
                         }
                     }
-                });
+                );
 
-                // Ghost Pursuit AI (Speed: 2.5 + scaling -> Slower than player speed of 120-185)
-                const ghostSpeed = 2.5 + (keysCollected * 0.5);
-                const ghostDir = new THREE.Vector3().subVectors(yawObject.position, ghost.position);
+
+                // -------------------------------------------------
+                // Ghost AI
+                // -------------------------------------------------
+
+                const ghostSpeed =
+                    2.5 +
+                    (
+                        keysCollected *
+                        0.5
+                    );
+
+
+                const ghostDir =
+                    new THREE.Vector3()
+                        .subVectors(
+                            yawObject.position,
+                            ghost.position
+                        );
+
+
                 ghostDir.y = 0;
+
                 ghostDir.normalize();
 
-                ghost.position.add(ghostDir.multiplyScalar(ghostSpeed * delta));
-                ghost.position.y = 0.5 + Math.sin(time * 0.006) * 0.5; // Floating movement
-                ghost.lookAt(yawObject.position.x, ghost.position.y, yawObject.position.z);
+
+                ghost.position.add(
+                    ghostDir.multiplyScalar(
+                        ghostSpeed *
+                        delta
+                    )
+                );
+
+
+                ghost.position.y =
+                    0.5 +
+                    Math.sin(
+                        time * 0.006
+                    ) *
+                    0.5;
+
+
+                ghost.lookAt(
+                    yawObject.position.x,
+                    ghost.position.y,
+                    yawObject.position.z
+                );
+
+
+                // -------------------------------------------------
+                // Minimap
+                // -------------------------------------------------
 
                 drawMinimap();
 
-                // Win/Loss Detection
-                const distToGhost = yawObject.position.distanceTo(ghost.position);
-                if (distToGhost < 2.2) {
-                    triggerGameOver(false);
+
+                // -------------------------------------------------
+                // Death
+                // -------------------------------------------------
+
+                const distToGhost =
+                    yawObject.position
+                        .distanceTo(
+                            ghost.position
+                        );
+
+
+                if (
+                    distToGhost < 2.2
+                ) {
+
+                    triggerGameOver(
+                        false
+                    );
                 }
 
-                const distToGate = yawObject.position.distanceTo(mainGate.position);
-                if (distToGate < 6.5 && keysCollected === 3) {
-                    triggerGameOver(true);
+
+                // -------------------------------------------------
+                // Escape
+                // -------------------------------------------------
+
+                const distToGate =
+                    yawObject.position
+                        .distanceTo(
+                            mainGate.position
+                        );
+
+
+                if (
+                    distToGate < 6.5 &&
+                    keysCollected === 3
+                ) {
+
+                    triggerGameOver(
+                        true
+                    );
                 }
             }
 
-            renderer.render(scene, camera);
+
+            renderer.render(
+                scene,
+                camera
+            );
         }
+
+
+        // =========================================================
+        // GAME OVER / ESCAPE
+        // =========================================================
 
         function triggerGameOver(won) {
-            gameOver = true;
-            document.exitPointerLock();
-            overlay.style.display = 'flex';
 
-            if (won) {
-                overlayTitle.innerText = "YOU ESCAPED!";
-                overlayTitle.style.color = "#00ffcc";
-                overlayTitle.style.textShadow = "0 0 20px #00ffcc";
-                overlayDesc.innerText = "You successfully gathered all 3 keys from P Block, Q Block, and N Block and unlocked the Main Gate!";
-            } else {
-                overlayTitle.innerText = "YOU DIED";
-                overlayTitle.style.color = "#ff0000";
-                overlayTitle.style.textShadow = "0 0 20px #ff0000";
-                overlayDesc.innerText = "The demon caught you in the dark. Your soul now belongs to VIT Vellore forever...";
+            if (gameOver) {
+                return;
             }
 
-            startBtn.innerText = "PLAY AGAIN";
-            startBtn.onclick = () => { window.location.reload(); };
+
+            gameOver = true;
+
+
+            if (won) {
+
+                // -----------------------------------------------
+                // Return to Phaser Level 1
+                // -----------------------------------------------
+
+                window.parent.postMessage(
+                    {
+                        type:
+                            'SAMOLE_ESCAPE'
+                    },
+                    '*'
+                );
+
+            } else {
+
+                // -----------------------------------------------
+                // Death -> Main Menu
+                // -----------------------------------------------
+
+                window.top.location.href =
+                    'index.html';
+            }
         }
+
     </script>
+
 </body>
 </html>

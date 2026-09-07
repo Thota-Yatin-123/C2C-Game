@@ -26,7 +26,6 @@ class Level1Scene extends Phaser.Scene {
         );
 
 
-
         /*
          * =================================
          * BACKGROUND
@@ -40,6 +39,7 @@ class Level1Scene extends Phaser.Scene {
             worldHeight,
             0x2d3a27
         );
+
 
         /*
          * =================================
@@ -249,6 +249,7 @@ class Level1Scene extends Phaser.Scene {
             )
         );
 
+
         /*
          * =================================
          * BUILDINGS
@@ -321,19 +322,481 @@ class Level1Scene extends Phaser.Scene {
             Phaser.Math.DegToRad(-10)
         );
 
+
+        /*
+         * =================================
+         * STREETLIGHT GLOW TEXTURE
+         * =================================
+         */
+
+        const glowCanvas =
+            document.createElement('canvas');
+
+        glowCanvas.width = 256;
+        glowCanvas.height = 256;
+
+        const glowContext =
+            glowCanvas.getContext('2d');
+
+        const gradient =
+            glowContext.createRadialGradient(
+                128,
+                128,
+                0,
+                128,
+                128,
+                128
+            );
+
+        gradient.addColorStop(
+            0,
+            'rgba(255, 230, 150, 0.95)'
+        );
+
+        gradient.addColorStop(
+            0.12,
+            'rgba(255, 220, 130, 0.75)'
+        );
+
+        gradient.addColorStop(
+            0.30,
+            'rgba(255, 205, 110, 0.40)'
+        );
+
+        gradient.addColorStop(
+            0.55,
+            'rgba(255, 190, 90, 0.16)'
+        );
+
+        gradient.addColorStop(
+            0.75,
+            'rgba(255, 180, 80, 0.06)'
+        );
+
+        gradient.addColorStop(
+            1,
+            'rgba(255, 170, 70, 0)'
+        );
+
+        glowContext.fillStyle = gradient;
+
+        glowContext.fillRect(
+            0,
+            0,
+            256,
+            256
+        );
+
+        if (!this.textures.exists('streetLightGlow')) {
+
+            this.textures.addCanvas(
+                'streetLightGlow',
+                glowCanvas
+            );
+
+        }
+
+
+        /*
+         * =================================
+         * FLICKERING STREETLIGHTS
+         * =================================
+         */
+
+        const streetLightPositions = [
+
+            [550, 510],
+            [1250, 570],
+            [1300, 185],
+
+            [975, 770],
+            [1060, 970],
+            [875, 1135],
+            [500, 1065],
+
+            [860, 1365],
+
+            [1425, 1165],
+            [1825, 1025],
+            [1975, 700],
+            [1500, 800],
+            [1875, 415]
+
+        ];
+
+        this.streetLights = [];
+
+
+        for (
+            const [x, y]
+            of streetLightPositions
+        ) {
+
+            /*
+             * Pole
+             */
+
+            const pole =
+                this.add.rectangle(
+                    x,
+                    y,
+                    6,
+                    45,
+                    0x191919
+                );
+
+            pole.setDepth(1001);
+
+
+            /*
+             * Lamp
+             */
+
+            const lamp =
+                this.add.rectangle(
+                    x,
+                    y - 25,
+                    14,
+                    8,
+                    0xffd98a
+                );
+
+            lamp.setDepth(1003);
+
+
+            /*
+             * Real radial glow
+             */
+
+            const glow =
+                this.add.image(
+                    x,
+                    y - 22,
+                    'streetLightGlow'
+                );
+
+            glow.setDisplaySize(
+                180,
+                180
+            );
+
+            glow.setDepth(1002);
+
+            glow.setBlendMode(
+                Phaser.BlendModes.ADD
+            );
+
+            glow.setAlpha(0.75);
+
+
+            this.streetLights.push({
+                pole,
+                lamp,
+                glow
+            });
+
+
+            /*
+             * Independent flickering
+             */
+
+            this.time.addEvent({
+
+                delay:
+                    Phaser.Math.Between(
+                        150,
+                        500
+                    ),
+
+                loop: true,
+
+                callback: () => {
+
+                    const flicker =
+                        Math.random();
+
+
+                    /*
+                     * Rare complete blackout
+                     */
+
+                    if (flicker < 0.12) {
+
+                        lamp.setAlpha(0.05);
+
+                        glow.setAlpha(0.04);
+
+
+                        this.time.delayedCall(
+
+                            Phaser.Math.Between(
+                                100,
+                                300
+                            ),
+
+                            () => {
+
+                                lamp.setAlpha(1);
+
+                                glow.setAlpha(
+                                    Phaser.Math.FloatBetween(
+                                        0.60,
+                                        0.85
+                                    )
+                                );
+
+                            }
+
+                        );
+
+                    }
+
+
+                    /*
+                     * Normal flicker
+                     */
+
+                    else {
+
+                        const brightness =
+                            Phaser.Math.FloatBetween(
+                                0.70,
+                                1
+                            );
+
+                        const glowBrightness =
+                            Phaser.Math.FloatBetween(
+                                0.55,
+                                0.85
+                            );
+
+                        lamp.setAlpha(
+                            brightness
+                        );
+
+                        glow.setAlpha(
+                            glowBrightness
+                        );
+
+                    }
+
+                }
+
+            });
+
+        }
+
+
+        /*
+         * =================================
+         * TRASH CANS
+         * =================================
+         */
+
+        const trashCanPositions = [
+
+            [550, 300],
+            [900, 590],
+            [1290, 590],
+
+            [650, 1130],
+            [900, 1060],
+
+            [1160, 1250],
+
+            [1425, 1025],
+            [1750, 750],
+            [1960, 975]
+
+        ];
+
+
+        for (
+            const [x, y]
+            of trashCanPositions
+        ) {
+
+            /*
+             * Main bin
+             */
+
+            const bin =
+                this.add.rectangle(
+                    x,
+                    y,
+                    18,
+                    25,
+                    0x303030
+                );
+
+            bin.setDepth(40);
+
+
+            /*
+             * Bin lid
+             */
+
+            const lid =
+                this.add.rectangle(
+                    x,
+                    y - 14,
+                    22,
+                    5,
+                    0x181818
+                );
+
+            lid.setDepth(41);
+
+
+            /*
+             * Small highlight
+             */
+
+            const highlight =
+                this.add.rectangle(
+                    x - 5,
+                    y - 4,
+                    2,
+                    14,
+                    0x555555
+                );
+
+            highlight.setDepth(41);
+
+        }
+
+
+        /*
+         * =================================
+         * LORE BOARD
+         * =================================
+         */
+
+        this.loreX = 720;
+        this.loreY = 555;
+
+        this.loreRead = false;
+
+
+        /*
+         * Main brown notice board
+         */
+
+        this.loreBoard =
+            this.add.rectangle(
+                this.loreX,
+                this.loreY,
+                50,
+                36,
+                0x6b3f20
+            );
+
+        this.loreBoard.setDepth(50);
+
+        this.loreBoard.setStrokeStyle(
+            2,
+            0x30180b
+        );
+
+
+        /*
+         * Black text-like lines
+         */
+
+        this.loreLines = [];
+
+        const lineData = [
+
+            {
+                x: -17,
+                y: -11,
+                width: 34
+            },
+
+            {
+                x: -17,
+                y: -5,
+                width: 40
+            },
+
+            {
+                x: -17,
+                y: 1,
+                width: 31
+            },
+
+            {
+                x: -17,
+                y: 7,
+                width: 38
+            },
+
+            {
+                x: -17,
+                y: 13,
+                width: 24
+            }
+
+        ];
+
+
+        for (
+            const line
+            of lineData
+        ) {
+
+            const textLine =
+                this.add.rectangle(
+                    this.loreX +
+                    line.x +
+                    line.width / 2,
+
+                    this.loreY +
+                    line.y,
+
+                    line.width,
+                    2,
+                    0x111111
+                );
+
+            textLine.setDepth(51);
+
+            this.loreLines.push(
+                textLine
+            );
+
+        }
+
+
+        /*
+         * Small nail/detail
+         */
+
+        this.loreBoardNail =
+            this.add.circle(
+                this.loreX,
+                this.loreY,
+                2,
+                0x191919
+            );
+
+        this.loreBoardNail.setDepth(52);
+
+
         /*
          * =================================
          * PLAYER
          * =================================
          */
 
-        this.player = this.add.rectangle(
-            1020,
-            700,
-            30,
-            30,
-            0xff0000
-        );
+        this.player =
+            this.add.rectangle(
+                1020,
+                700,
+                30,
+                30,
+                0xff0000
+            );
 
         this.physics.add.existing(
             this.player
@@ -342,6 +805,7 @@ class Level1Scene extends Phaser.Scene {
         this.player.body.setCollideWorldBounds(
             true
         );
+
 
         /*
          * =================================
@@ -354,11 +818,21 @@ class Level1Scene extends Phaser.Scene {
 
         this.keys =
             this.input.keyboard.addKeys({
-                W: Phaser.Input.Keyboard.KeyCodes.W,
-                A: Phaser.Input.Keyboard.KeyCodes.A,
-                S: Phaser.Input.Keyboard.KeyCodes.S,
-                D: Phaser.Input.Keyboard.KeyCodes.D
+
+                W:
+                    Phaser.Input.Keyboard.KeyCodes.W,
+
+                A:
+                    Phaser.Input.Keyboard.KeyCodes.A,
+
+                S:
+                    Phaser.Input.Keyboard.KeyCodes.S,
+
+                D:
+                    Phaser.Input.Keyboard.KeyCodes.D
+
             });
+
 
         /*
          * =================================
@@ -371,6 +845,7 @@ class Level1Scene extends Phaser.Scene {
                 Phaser.Input.Keyboard.KeyCodes.E
             );
 
+
         /*
          * =================================
          * CAMERA
@@ -382,6 +857,7 @@ class Level1Scene extends Phaser.Scene {
             true
         );
 
+
         /*
          * =================================
          * DARKNESS
@@ -392,22 +868,140 @@ class Level1Scene extends Phaser.Scene {
             this.add.graphics();
 
         this.darkness.setScrollFactor(0);
+
         this.darkness.setDepth(1000);
 
-        /*
-         * =================================
-         * FLASHLIGHT
-         * =================================
-         */
 
-        this.flashlight =
-            this.add.graphics();
 
-        this.flashlight.setScrollFactor(0);
-        this.flashlight.setDepth(1001);
+/*
+ * =================================
+ * FLASHLIGHT
+ * =================================
+ */
 
-        this.facingX = 0;
-        this.facingY = -1;
+this.flashlight =
+    this.add.graphics();
+
+this.flashlight.setScrollFactor(0);
+
+this.flashlight.setDepth(1001);
+
+
+/*
+ * =================================
+ * FLASHLIGHT RADIAL GLOW TEXTURE
+ * =================================
+ */
+
+const torchCanvas =
+    document.createElement('canvas');
+
+torchCanvas.width = 256;
+torchCanvas.height = 256;
+
+const torchContext =
+    torchCanvas.getContext('2d');
+
+const torchGradient =
+    torchContext.createRadialGradient(
+        128,
+        128,
+        0,
+        128,
+        128,
+        128
+    );
+
+torchGradient.addColorStop(
+    0,
+    'rgba(255, 255, 220, 0.90)'
+);
+
+torchGradient.addColorStop(
+    0.12,
+    'rgba(255, 255, 210, 0.65)'
+);
+
+torchGradient.addColorStop(
+    0.30,
+    'rgba(255, 250, 190, 0.35)'
+);
+
+torchGradient.addColorStop(
+    0.50,
+    'rgba(255, 240, 160, 0.16)'
+);
+
+torchGradient.addColorStop(
+    0.70,
+    'rgba(255, 230, 130, 0.06)'
+);
+
+torchGradient.addColorStop(
+    1,
+    'rgba(255, 220, 100, 0)'
+);
+
+torchContext.fillStyle =
+    torchGradient;
+
+torchContext.fillRect(
+    0,
+    0,
+    256,
+    256
+);
+
+
+if (
+    !this.textures.exists(
+        'torchGlow'
+    )
+) {
+
+    this.textures.addCanvas(
+        'torchGlow',
+        torchCanvas
+    );
+
+}
+
+
+/*
+ * Actual soft glow
+ */
+
+this.torchGlow =
+    this.add.image(
+        0,
+        0,
+        'torchGlow'
+    );
+
+this.torchGlow.setScrollFactor(0);
+
+this.torchGlow.setDepth(1001);
+
+this.torchGlow.setDisplaySize(
+    180,
+    180
+);
+
+this.torchGlow.setBlendMode(
+    Phaser.BlendModes.ADD
+);
+
+this.torchGlow.setAlpha(
+    0.65
+);
+
+
+this.facingX = 0;
+this.facingY = -1;
+
+
+
+
 
         /*
          * =================================
@@ -418,20 +1012,19 @@ class Level1Scene extends Phaser.Scene {
         this.gamePaused = false;
 
 
-/*
- * =================================
- * INTERACTION LOCATION
- * =================================
- */
+        /*
+         * =================================
+         * INTERACTION LOCATIONS
+         * =================================
+         */
 
-this.interactionX = 1050;
-this.interactionY = 1000;
+        this.interactionX = 1050;
+        this.interactionY = 1000;
 
-this.interactionX2 = 1600;
-this.interactionY2 = 1000;
-this.subwayUnlocked = false;
+        this.interactionX2 = 1600;
+        this.interactionY2 = 1000;
 
-
+        this.subwayUnlocked = false;
 
 
         /*
@@ -469,6 +1062,100 @@ this.subwayUnlocked = false;
 
         this.interactionPrompt.setVisible(false);
 
+
+        /*
+         * =================================
+         * LORE PROMPT
+         * =================================
+         */
+
+        this.lorePrompt =
+            this.add.text(
+                0,
+                0,
+                '[ E ] READ',
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '18px',
+                    fontStyle: 'bold',
+                    color: '#ffffff',
+                    backgroundColor: '#000000',
+
+                    padding: {
+                        left: 10,
+                        right: 10,
+                        top: 6,
+                        bottom: 6
+                    }
+                }
+            );
+
+        this.lorePrompt.setOrigin(0.5);
+
+        this.lorePrompt.setScrollFactor(0);
+
+        this.lorePrompt.setDepth(2000);
+
+        this.lorePrompt.setVisible(false);
+
+
+        /*
+         * =================================
+         * LORE OVERLAY
+         * =================================
+         */
+
+        this.loreOverlay =
+            this.add.rectangle(
+                this.scale.width / 2,
+                this.scale.height / 2,
+                this.scale.width,
+                this.scale.height,
+                0x000000,
+                0.82
+            );
+
+        this.loreOverlay.setScrollFactor(0);
+
+        this.loreOverlay.setDepth(3000);
+
+        this.loreOverlay.setVisible(false);
+
+
+        /*
+         * =================================
+         * LORE TEXT
+         * =================================
+         */
+
+        this.loreText =
+            this.add.text(
+                this.scale.width / 2,
+                this.scale.height / 2,
+                '',
+                {
+                    fontFamily: 'Courier New',
+                    fontSize: '20px',
+                    color: '#dddddd',
+                    align: 'left',
+
+                    wordWrap: {
+                        width: 650
+                    },
+
+                    lineSpacing: 8
+                }
+            );
+
+        this.loreText.setOrigin(0.5);
+
+        this.loreText.setScrollFactor(0);
+
+        this.loreText.setDepth(3001);
+
+        this.loreText.setVisible(false);
+
+
         /*
          * =================================
          * SAMOLE HORROR GAME IFRAME
@@ -476,7 +1163,9 @@ this.subwayUnlocked = false;
          */
 
         this.samoleFrame = null;
+
         this.samoleLoaded = false;
+
 
         /*
          * =================================
@@ -486,40 +1175,40 @@ this.subwayUnlocked = false;
 
         this.samoleMessageHandler = (event) => {
 
-    /*
-     * =================================
-     * ALL KEYS COLLECTED
-     * =================================
-     */
+            /*
+             * ALL KEYS COLLECTED
+             */
 
-    if (
-        event.data &&
-        event.data.type === 'SAMOLE_KEYS_COLLECTED'
-    ) {
+            if (
+                event.data &&
+                event.data.type ===
+                'SAMOLE_KEYS_COLLECTED'
+            ) {
 
-        this.subwayUnlocked = true;
+                this.subwayUnlocked = true;
 
-        return;
-    }
+                return;
 
+            }
 
-    /*
-     * =================================
-     * SAMOLE ESCAPED
-     * =================================
-     */
-
-    if (
-        !event.data ||
-        event.data.type !== 'SAMOLE_ESCAPE'
-    ) {
-        return;
-    }
-
-    // Everything below this stays exactly as it is.
 
             /*
-             * Hide SAMOLE.
+             * SAMOLE ESCAPED
+             */
+
+            if (
+                !event.data ||
+                event.data.type !==
+                'SAMOLE_ESCAPE'
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Hide SAMOLE
              */
 
             if (this.samoleFrame) {
@@ -529,13 +1218,15 @@ this.subwayUnlocked = false;
 
             }
 
+
             /*
-             * Resume Level 1.
+             * Resume Level 1
              */
 
             this.gamePaused = false;
 
             this.physics.resume();
+
 
             if (this.input.keyboard) {
 
@@ -543,6 +1234,7 @@ this.subwayUnlocked = false;
                     true;
 
             }
+
 
             if (
                 this.player &&
@@ -556,18 +1248,21 @@ this.subwayUnlocked = false;
 
             }
 
+
             /*
-             * Focus Phaser again.
+             * Focus Phaser again
              */
 
             this.game.canvas.focus();
 
         };
 
+
         window.addEventListener(
             'message',
             this.samoleMessageHandler
         );
+
 
         this.gamePaused = false;
 
@@ -625,6 +1320,7 @@ this.subwayUnlocked = false;
 
         ];
 
+
         for (
             const [x, y]
             of glowPositions
@@ -653,6 +1349,7 @@ this.subwayUnlocked = false;
             );
 
         }
+
 
         this.time.addEvent({
 
@@ -759,6 +1456,7 @@ this.subwayUnlocked = false;
 
         ];
 
+
         for (
             const road of this.roads
         ) {
@@ -774,6 +1472,7 @@ this.subwayUnlocked = false;
                 );
 
             let insideCount = 0;
+
 
             for (
                 const point
@@ -795,6 +1494,7 @@ this.subwayUnlocked = false;
                 const rotatedY =
                     dx * sin +
                     dy * cos;
+
 
                 if (
 
@@ -818,10 +1518,6 @@ this.subwayUnlocked = false;
 
             }
 
-            /*
-             * Require at least 3 points
-             * to be inside the road.
-             */
 
             if (
                 insideCount >= 3
@@ -847,24 +1543,40 @@ this.subwayUnlocked = false;
     update() {
 
         /*
-         * Stop gameplay after interaction.
+         * LORE SCREEN
          */
 
         if (this.gamePaused) {
 
+            if (
+                Phaser.Input.Keyboard.JustDown(
+                    this.interactKey
+                )
+            ) {
+
+                if (
+                    this.loreOverlay.visible
+                ) {
+
+                    this.closeLore();
+
+                }
+
+            }
+
             return;
 
         }
+
 
         const speed = 300;
 
         let velocityX = 0;
         let velocityY = 0;
 
+
         /*
-         * =================================
          * MOVEMENT INPUT
-         * =================================
          */
 
         if (
@@ -903,10 +1615,9 @@ this.subwayUnlocked = false;
 
         }
 
+
         /*
-         * =================================
          * DIAGONAL MOVEMENT
-         * =================================
          */
 
         if (
@@ -930,10 +1641,9 @@ this.subwayUnlocked = false;
 
         }
 
+
         /*
-         * =================================
          * NEXT POSITION
-         * =================================
          */
 
         const delta =
@@ -947,10 +1657,9 @@ this.subwayUnlocked = false;
             this.player.y +
             velocityY * delta;
 
+
         /*
-         * =================================
          * ROAD-ONLY MOVEMENT
-         * =================================
          */
 
         if (
@@ -988,111 +1697,180 @@ this.subwayUnlocked = false;
 
         }
 
+
         /*
-         * =================================
-         * INTERACTION
-         * =================================
+         * INTERACTION DISTANCES
          */
 
-const distanceToBuilding =
-    Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.interactionX,
-        this.interactionY
-    );
+        const distanceToBuilding =
+            Phaser.Math.Distance.Between(
+                this.player.x,
+                this.player.y,
+                this.interactionX,
+                this.interactionY
+            );
 
-const distance2 =
-    Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.interactionX2,
-        this.interactionY2
-    );
+        const distance2 =
+            Phaser.Math.Distance.Between(
+                this.player.x,
+                this.player.y,
+                this.interactionX2,
+                this.interactionY2
+            );
 
-const canInteract =
-    distanceToBuilding < 40;
-
-const canInteract2 =
-    distance2 < 60;
-
-
-/*
- * =================================
- * INTERACTION PROMPT
- * =================================
- */
-
-if (canInteract || canInteract2) {
-
-    this.interactionPrompt.setVisible(true);
-
-    const screenX =
-        this.player.x -
-        this.cameras.main.scrollX;
-
-    const screenY =
-        this.player.y -
-        this.cameras.main.scrollY;
-
-    this.interactionPrompt.setPosition(
-        screenX,
-        screenY - 45
-    );
-
-} else {
-
-    this.interactionPrompt.setVisible(false);
-
-}
+        const distanceToLore =
+            Phaser.Math.Distance.Between(
+                this.player.x,
+                this.player.y,
+                this.loreX,
+                this.loreY
+            );
 
 
-/*
- * =================================
- * PRESS E
- * =================================
- */
+        const canInteract =
+            distanceToBuilding < 40;
 
-/*
- * First interaction → SAMOLE
- */
+        const canInteract2 =
+            distance2 < 60;
 
-if (
-    canInteract &&
-    Phaser.Input.Keyboard.JustDown(
-        this.interactKey
-    )
-) {
-
-    this.showTestScreen();
-
-    return;
-}
+        const canReadLore =
+            distanceToLore < 55;
 
 
-/*
- * Second interaction → NOTHING FOR NOW
- */
-
-if (
-    canInteract2 &&
-    this.subwayUnlocked &&
-    Phaser.Input.Keyboard.JustDown(
-        this.interactKey
-    )
-) {
-
-    this.scene.start('SubwayTunnel1');
-
-    return;
-}
         /*
-         * =================================
+         * LORE PROMPT
+         */
+
+        if (canReadLore) {
+
+            this.interactionPrompt.setVisible(
+                false
+            );
+
+            this.lorePrompt.setVisible(
+                true
+            );
+
+            const screenX =
+                this.player.x -
+                this.cameras.main.scrollX;
+
+            const screenY =
+                this.player.y -
+                this.cameras.main.scrollY;
+
+            this.lorePrompt.setPosition(
+                screenX,
+                screenY - 45
+            );
+
+        } else {
+
+            this.lorePrompt.setVisible(
+                false
+            );
+
+
+            /*
+             * NORMAL INTERACTION PROMPT
+             */
+
+            if (
+                canInteract ||
+                canInteract2
+            ) {
+
+                this.interactionPrompt.setVisible(
+                    true
+                );
+
+                const screenX =
+                    this.player.x -
+                    this.cameras.main.scrollX;
+
+                const screenY =
+                    this.player.y -
+                    this.cameras.main.scrollY;
+
+                this.interactionPrompt.setPosition(
+                    screenX,
+                    screenY - 45
+                );
+
+            } else {
+
+                this.interactionPrompt.setVisible(
+                    false
+                );
+
+            }
+
+        }
+
+
+        /*
+         * PRESS E — LORE
+         */
+
+        if (
+            canReadLore &&
+            Phaser.Input.Keyboard.JustDown(
+                this.interactKey
+            )
+        ) {
+
+            this.openLore();
+
+            return;
+
+        }
+
+
+        /*
+         * PRESS E — SAMOLE
+         */
+
+        if (
+            canInteract &&
+            Phaser.Input.Keyboard.JustDown(
+                this.interactKey
+            )
+        ) {
+
+            this.showTestScreen();
+
+            return;
+
+        }
+
+
+        /*
+         * PRESS E — SUBWAY
+         */
+
+        if (
+            canInteract2 &&
+            this.subwayUnlocked &&
+            Phaser.Input.Keyboard.JustDown(
+                this.interactKey
+            )
+        ) {
+
+            this.scene.start(
+                'SubwayTunnel1'
+            );
+
+            return;
+
+        }
+
+
+        /*
          * DARKNESS
-         * =================================
          */
 
         this.darkness.clear();
+
 
         const playerX =
             this.player.x -
@@ -1102,10 +1880,12 @@ if (
             this.player.y -
             this.cameras.main.scrollY;
 
+
         this.darkness.fillStyle(
             0x000000,
-            0.90
+            0.82
         );
+
 
         this.darkness.fillRect(
             0,
@@ -1114,10 +1894,9 @@ if (
             this.scale.height
         );
 
+
         /*
-         * =================================
          * FACING DIRECTION
-         * =================================
          */
 
         if (
@@ -1131,6 +1910,7 @@ if (
             this.facingY =
                 velocityY;
 
+
             const length =
                 Math.sqrt(
                     this.facingX *
@@ -1140,6 +1920,7 @@ if (
                     this.facingY
                 );
 
+
             this.facingX /=
                 length;
 
@@ -1148,16 +1929,16 @@ if (
 
         }
 
+
         /*
-         * =================================
          * FLASHLIGHT
-         * =================================
          */
 
         this.flashlight.clear();
 
         const flashlightLength = 280;
         const flashlightWidth = 70;
+
 
         const endX =
             playerX +
@@ -1169,11 +1950,13 @@ if (
             this.facingY *
             flashlightLength;
 
+
         const perpendicularX =
             -this.facingY;
 
         const perpendicularY =
             this.facingX;
+
 
         const leftX =
             endX +
@@ -1185,6 +1968,7 @@ if (
             perpendicularY *
             flashlightWidth;
 
+
         const rightX =
             endX -
             perpendicularX *
@@ -1195,10 +1979,12 @@ if (
             perpendicularY *
             flashlightWidth;
 
+
         this.flashlight.fillStyle(
             0xffffcc,
             0.20
         );
+
 
         this.flashlight.beginPath();
 
@@ -1226,133 +2012,252 @@ if (
 
     /*
      * =================================
+     * OPEN LORE
+     * =================================
+     */
+
+    openLore() {
+
+        this.gamePaused = true;
+
+        this.physics.pause();
+
+        this.interactionPrompt.setVisible(
+            false
+        );
+
+        this.lorePrompt.setVisible(
+            false
+        );
+
+        this.loreOverlay.setVisible(
+            true
+        );
+
+
+        this.loreText.setText(
+`HOSTEL NOTICE — 17/08/20XX
+
+
+Students are advised not to leave
+their rooms after 12:00 AM.
+
+Reports of unusual sounds near the
+Q-block are being investigated.
+
+
+Residents are reminded to keep their
+hostel doors locked at night.
+
+
+— HOSTEL ADMINISTRATION
+
+
+[ E ] CLOSE`
+        );
+
+
+        this.loreText.setVisible(
+            true
+        );
+
+        this.loreRead = true;
+
+    }
+
+
+    /*
+     * =================================
+     * CLOSE LORE
+     * =================================
+     */
+
+    closeLore() {
+
+        this.loreOverlay.setVisible(
+            false
+        );
+
+        this.loreText.setVisible(
+            false
+        );
+
+        this.gamePaused = false;
+
+        this.physics.resume();
+
+        this.game.canvas.focus();
+
+    }
+
+
+    /*
+     * =================================
      * START SAMOLE
      * =================================
      */
 
     showTestScreen() {
 
-    /*
-     * =================================
-     * PREVENT MULTIPLE IFRAMES
-     * =================================
-     */
+        /*
+         * PREVENT MULTIPLE IFRAMES
+         */
 
-    if (this.samoleFrame) {
+        if (this.samoleFrame) {
+
+            this.gamePaused = true;
+
+            this.physics.pause();
+
+            this.interactionPrompt.setVisible(
+                false
+            );
+
+            this.lorePrompt.setVisible(
+                false
+            );
+
+            this.samoleFrame.style.display =
+                'block';
+
+            this.samoleFrame.contentWindow.focus();
+
+            return;
+
+        }
+
+
+        /*
+         * PAUSE LEVEL 1
+         */
 
         this.gamePaused = true;
 
         this.physics.pause();
 
-        this.interactionPrompt.setVisible(false);
+        this.interactionPrompt.setVisible(
+            false
+        );
 
-        this.samoleFrame.style.display = 'block';
+        this.lorePrompt.setVisible(
+            false
+        );
 
-        this.samoleFrame.contentWindow.focus();
 
-        return;
-    }
+        /*
+         * CREATE SAMOLE IFRAME
+         */
 
-    /*
-     * =================================
-     * PAUSE LEVEL 1
-     * =================================
-     */
+        this.samoleFrame =
+            document.createElement(
+                'iframe'
+            );
 
-    this.gamePaused = true;
 
-    this.physics.pause();
+        /*
+         * Allow Pointer Lock inside SAMOLE
+         */
 
-    this.interactionPrompt.setVisible(false);
+        this.samoleFrame.setAttribute(
+            'allow',
+            'pointer-lock'
+        );
 
-    /*
-     * =================================
-     * CREATE SAMOLE IFRAME
-     * =================================
-     */
 
-    this.samoleFrame = document.createElement('iframe');
+        this.samoleFrame.style.position =
+            'fixed';
 
-    /*
-     * Allow Pointer Lock inside SAMOLE
-     */
+        this.samoleFrame.style.top =
+            '0';
 
-    this.samoleFrame.setAttribute(
-        'allow',
-        'pointer-lock'
-    );
+        this.samoleFrame.style.left =
+            '0';
 
-    this.samoleFrame.style.position = 'fixed';
-    this.samoleFrame.style.top = '0';
-    this.samoleFrame.style.left = '0';
-    this.samoleFrame.style.width = '100vw';
-    this.samoleFrame.style.height = '100vh';
-    this.samoleFrame.style.border = 'none';
-    this.samoleFrame.style.zIndex = '99999';
-    this.samoleFrame.style.display = 'block';
-    this.samoleFrame.style.background = '#000000';
+        this.samoleFrame.style.width =
+            '100vw';
 
-    /*
-     * Allow iframe to receive keyboard focus
-     */
+        this.samoleFrame.style.height =
+            '100vh';
 
-    this.samoleFrame.setAttribute(
-        'tabindex',
-        '-1'
-    );
+        this.samoleFrame.style.border =
+            'none';
 
-    /*
-     * Add iframe to page
-     */
+        this.samoleFrame.style.zIndex =
+            '99999';
 
-    document.body.appendChild(
-        this.samoleFrame
-    );
+        this.samoleFrame.style.display =
+            'block';
 
-    /*
-     * Load SAMOLE
-     */
+        this.samoleFrame.style.background =
+            '#000000';
 
-    this.samoleFrame.src = 'SAMOLE.html';
 
-    /*
-     * When SAMOLE loads, focus it
-     */
+        /*
+         * Allow iframe to receive keyboard focus
+         */
 
-    this.samoleFrame.addEventListener(
-        'load',
-        () => {
+        this.samoleFrame.setAttribute(
+            'tabindex',
+            '-1'
+        );
 
-            this.samoleLoaded = true;
 
-            this.samoleFrame.contentWindow.focus();
+        /*
+         * Add iframe to page
+         */
 
-            try {
+        document.body.appendChild(
+            this.samoleFrame
+        );
 
-                const samoleDocument =
-                    this.samoleFrame.contentDocument;
 
-                if (
-                    samoleDocument &&
-                    samoleDocument.body
-                ) {
+        /*
+         * Load SAMOLE
+         */
 
-                    samoleDocument.body.focus();
+        this.samoleFrame.src =
+            'SAMOLE.html';
+
+
+        /*
+         * When SAMOLE loads, focus it
+         */
+
+        this.samoleFrame.addEventListener(
+            'load',
+            () => {
+
+                this.samoleLoaded = true;
+
+                this.samoleFrame.contentWindow.focus();
+
+
+                try {
+
+                    const samoleDocument =
+                        this.samoleFrame.contentDocument;
+
+                    if (
+                        samoleDocument &&
+                        samoleDocument.body
+                    ) {
+
+                        samoleDocument.body.focus();
+
+                    }
+
+                } catch (error) {
+
+                    console.log(
+                        'SAMOLE focus:',
+                        error
+                    );
 
                 }
 
-            } catch (error) {
-
-                console.log(
-                    'SAMOLE focus:',
-                    error
-                );
-
             }
+        );
 
-        }
-    );
-
-}
+    }
 
 }
