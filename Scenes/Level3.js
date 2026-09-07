@@ -47,7 +47,7 @@ class Level3Scene extends Phaser.Scene {
 
         /*
          * =================================
-         * ROAD
+         * MAIN ROAD
          * =================================
          */
 
@@ -57,12 +57,265 @@ class Level3Scene extends Phaser.Scene {
 
         this.roads.push(
             this.add.rectangle(
-                worldWidth / 2,
-                worldHeight / 2,
-                worldWidth,
+                1250,
+                600,
+                1500,
                 100,
                 roadColor
             )
+        );
+
+        const road1 =
+            this.add.rectangle(
+                385,
+                648,
+                300,
+                100,
+                roadColor
+            );
+
+        road1.setRotation(
+            Phaser.Math.DegToRad(-20)
+        );
+
+        this.roads.push(
+            road1
+        );
+
+        this.roads.push(
+            this.add.rectangle(
+                275,
+                1100,
+                100,
+                900,
+                roadColor
+            )
+        );
+
+        const road2 =
+            this.add.rectangle(
+                1000,
+                680,
+                400,
+                50,
+                roadColor
+            );
+
+        road2.setRotation(
+            Phaser.Math.DegToRad(20)
+        );
+
+        this.roads.push(
+            road2
+        );
+
+        const road3 =
+            this.add.rectangle(
+                1800,
+                680,
+                400,
+                50,
+                roadColor
+            );
+
+        road3.setRotation(
+            Phaser.Math.DegToRad(-20)
+        );
+
+        this.roads.push(
+            road3
+        );
+
+        this.roads.push(
+            this.add.rectangle(
+                1400,
+                745,
+                470,
+                50,
+                roadColor
+            )
+        );
+
+        const road4 =
+            this.add.rectangle(
+                900,
+                845,
+                600,
+                50,
+                roadColor
+            );
+
+        road4.setRotation(
+            Phaser.Math.DegToRad(-20)
+        );
+
+        this.roads.push(
+            road4
+        );
+
+        const road5 =
+            this.add.rectangle(
+                425,
+                770,
+                600,
+                50,
+                roadColor
+            );
+
+        road5.setRotation(
+            Phaser.Math.DegToRad(45)
+        );
+
+        this.roads.push(
+            road5
+        );
+
+        this.roads.push(
+            this.add.rectangle(
+                625,
+                1250,
+                50,
+                600,
+                roadColor
+            )
+        );
+
+        this.roads.push(
+            this.add.rectangle(
+                85,
+                570,
+                300,
+                50,
+                roadColor
+            )
+        );
+
+
+        /*
+         * =================================
+         * BUILDING
+         * =================================
+         */
+
+        const building =
+            this.add.rectangle(
+                1450,
+                1200,
+                1500,
+                500,
+                0x55504a
+            );
+building.setRotation(
+            Phaser.Math.DegToRad(-5)
+        );
+        building.setDepth(10);
+
+
+        /*
+         * =================================
+         * TRAIN TRACKS
+         * =================================
+         */
+
+        this.add.rectangle(
+            worldWidth / 2,
+            150,
+            worldWidth,
+            160,
+            0x5a3a22
+        );
+
+
+        /*
+         * Wooden sleepers
+         */
+
+        for (
+            let x = 0;
+            x < worldWidth;
+            x += 50
+        ) {
+
+            this.add.rectangle(
+                x,
+                150,
+                25,
+                140,
+                0x8b5a2b
+            );
+
+        }
+
+
+        /*
+         * Metal rails
+         */
+
+        this.add.rectangle(
+            worldWidth / 2,
+            105,
+            worldWidth,
+            12,
+            0xaaaaaa
+        );
+
+        this.add.rectangle(
+            worldWidth / 2,
+            195,
+            worldWidth,
+            12,
+            0xaaaaaa
+        );
+
+
+        /*
+         * =================================
+         * RAILING
+         * =================================
+         */
+
+        const fenceColor = 0x555555;
+
+
+        /*
+         * Fence posts
+         */
+
+        for (
+            let x = 0;
+            x <= worldWidth;
+            x += 100
+        ) {
+
+            this.add.rectangle(
+                x,
+                270,
+                15,
+                100,
+                fenceColor
+            );
+
+        }
+
+
+        /*
+         * Horizontal fence bars
+         */
+
+        this.add.rectangle(
+            worldWidth / 2,
+            240,
+            worldWidth,
+            10,
+            fenceColor
+        );
+
+        this.add.rectangle(
+            worldWidth / 2,
+            290,
+            worldWidth,
+            10,
+            fenceColor
         );
 
 
@@ -74,8 +327,8 @@ class Level3Scene extends Phaser.Scene {
 
         this.player =
             this.add.rectangle(
-                1900,
-                700,
+                1800,
+                600,
                 30,
                 30,
                 0xff0000
@@ -138,22 +391,6 @@ class Level3Scene extends Phaser.Scene {
 
             });
 
-
-        /*
-         * =================================
-         * LEVEL 3 TEXT
-         * =================================
-         */
-
-        this.add.text(
-            1000,
-            300,
-            'LEVEL 3 WORKS',
-            {
-                fontSize: '40px',
-                color: '#ffffff'
-            }
-        ).setOrigin(0.5);
 
     }
 
@@ -283,7 +520,7 @@ class Level3Scene extends Phaser.Scene {
 
     update() {
 
-        const speed = 500;
+        const speed = 100;
 
         let velocityX = 0;
         let velocityY = 0;

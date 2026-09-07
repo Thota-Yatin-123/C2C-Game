@@ -1231,8 +1231,7 @@ class Level1Scene extends Phaser.Scene {
         this.interactionY2 = 1000;
 
         //DELETE THIS!!!
-        this.subwayUnlocked = true;
-
+        //this.subwayUnlocked = true;
 
         /*
          * =================================
@@ -1880,7 +1879,7 @@ class Level1Scene extends Phaser.Scene {
         }
 
 
-        const speed = 500;
+        const speed = 100;
 
         let velocityX = 0;
         let velocityY = 0;

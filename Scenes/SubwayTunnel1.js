@@ -1534,7 +1534,7 @@ class SubwayTunnel1 extends Phaser.Scene {
          * =================================
          */
 
-        const speed = 500;
+        const speed = 100;
 
         let velocityX = 0;
         let velocityY = 0;
